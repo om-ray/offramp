@@ -327,7 +327,7 @@ export default function Home() {
                   <p className="mt-2">
                     Polymarket's own all-time profit and loss for this wallet: {usd(poly.money.officialAllTimePnl)}.
                     {polyGap <= -5 &&
-                      ` That's ${usd(-polyGap)} better than your Polymarket row above. The usual reason is cash in the account you haven't entered above, or money moved in or out without a bet.`}
+                      ` That's ${usd(-polyGap)} better than your Polymarket row above. The usual reason is cash in the account you haven't entered, or money moved in or out without a bet.`}
                     {polyGap >= 5 &&
                       ` Polymarket shows ${usd(polyGap)} less than your Polymarket row above. Check you typed only your cash, not your portfolio total. Money sent straight from an exchange may not show here as a deposit. ${poly.money.officialAllTimePnl < 0 ? "Go by the bigger loss." : "Go by Polymarket's number."}`}
                   </p>
