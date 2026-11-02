@@ -21,6 +21,14 @@ export async function GET(request: Request) {
   try {
     const wallet: string = await resolveWallet(input);
     const [money, report] = await Promise.all([polymarketMoney(wallet), buildReport({ wallet })]);
+    const bets = summarizeBets(report.positions as Position[]);
+    const empty = !money.deposited && !money.withdrawn && !money.openPositionValue && !money.officialAllTimePnl && !bets.winning && !bets.losing;
+    if (empty) {
+      return NextResponse.json(
+        { error: "There's no Polymarket activity at this address. Use the wallet address shown on your polymarket.com profile, not a MetaMask or exchange address." },
+        { status: 404 },
+      );
+    }
     return NextResponse.json({
       wallet,
       money,
@@ -28,7 +36,7 @@ export async function GET(request: Request) {
         from: report.coverage.earliestTradeAt,
         to: report.coverage.latestTradeAt,
         truncated: report.coverage.truncated,
-        ...summarizeBets(report.positions as Position[]),
+        ...bets,
       },
     });
   } catch (err) {

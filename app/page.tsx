@@ -104,6 +104,7 @@ export default function Home() {
   const guessed = parseAmount(guess);
   const shown = Math.round(total);
   const resultRef = useRef<HTMLElement>(null);
+  const lookup = useRef(0);
   useEffect(() => {
     if (revealed) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [revealed]);
@@ -114,13 +115,16 @@ export default function Home() {
     setPolyError("");
     setPoly(null);
     setPolyCash("");
+    const id = ++lookup.current;
     try {
       const res = await fetch(`/api/polymarket?wallet=${encodeURIComponent(walletInput.trim())}`);
       const body = await res.json().catch(() => ({ error: "Polymarket took too long to answer. Try again in a minute, or type your totals in by hand." }));
+      if (id !== lookup.current) return;
       if (!res.ok || body.error) throw new Error(body.error ?? "We couldn't load that wallet.");
       setPoly(body);
       setPolyState("idle");
     } catch (err) {
+      if (id !== lookup.current) return;
       setPolyError((err as Error).message);
       setPolyState("error");
     }
@@ -134,6 +138,7 @@ export default function Home() {
   }
 
   function startOver() {
+    lookup.current++;
     clearSaved();
     setGuess("");
     setAmounts({});
@@ -322,9 +327,9 @@ export default function Home() {
                   <p className="mt-2">
                     Polymarket's own all-time profit and loss for this wallet: {usd(poly.money.officialAllTimePnl)}.
                     {polyGap <= -5 &&
-                      ` That's ${usd(-polyGap)} better than the number above. The usual reason is cash in the account you haven't entered above, or money moved in or out without a bet.`}
+                      ` That's ${usd(-polyGap)} better than your Polymarket row above. The usual reason is cash in the account you haven't entered above, or money moved in or out without a bet.`}
                     {polyGap >= 5 &&
-                      ` Polymarket says you're down ${usd(polyGap)} more than the number above. Check you typed only your cash, not your portfolio total. Money sent straight from an exchange may not show here as a deposit. Go by the bigger loss.`}
+                      ` Polymarket shows ${usd(polyGap)} less than your Polymarket row above. Check you typed only your cash, not your portfolio total. Money sent straight from an exchange may not show here as a deposit. ${poly.money.officialAllTimePnl < 0 ? "Go by the bigger loss." : "Go by Polymarket's number."}`}
                   </p>
                 )}
                 {!poly.money.cashFlowComplete && <p className="mt-2">This wallet has more deposits than we could read, so "Put in" may be too low.</p>}
