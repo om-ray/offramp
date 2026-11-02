@@ -10,6 +10,7 @@ function plainError(message: string): { error: string; status: number } {
   if (/must match one public profile/i.test(message)) {
     return { error: "We couldn't find exactly one polymarket.com profile with that name. Try the wallet address from your profile page.", status: 404 };
   }
+  if (/invalid_request|400/i.test(message)) return { error: "That address isn't a Polymarket account. Check it against your profile page.", status: 400 };
   if (/429|rate/i.test(message)) return { error: "Polymarket is busy right now. Try again in a minute.", status: 503 };
   return { error: "We couldn't read this wallet from Polymarket just now. Try again, or type your totals in by hand below.", status: 502 };
 }

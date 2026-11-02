@@ -28,7 +28,7 @@ const PLATFORMS: { id: string; name: string; where: string }[] = [
 ];
 
 const STORE = "offramp:v1";
-const KEYS = ["guess", "amounts", "polyCash", "done"];
+const KEYS = ["guess", "amounts", "done"];
 const EMPTY: Amounts = { deposited: "", withdrawn: "", balance: "" };
 
 function load<T>(key: string, fallback: T): T {
@@ -72,7 +72,6 @@ export default function Home() {
   useEffect(() => {
     setGuess(load("guess", ""));
     setAmounts(load("amounts", {}));
-    setPolyCash(load("polyCash", ""));
     setDone(load("done", {}));
     setHydrated(true);
   }, []);
@@ -80,9 +79,8 @@ export default function Home() {
     if (!hydrated) return;
     save("guess", guess);
     save("amounts", amounts);
-    save("polyCash", polyCash);
     save("done", done);
-  }, [hydrated, guess, amounts, polyCash, done]);
+  }, [hydrated, guess, amounts, done]);
 
   const {
     rows,
@@ -104,16 +102,18 @@ export default function Home() {
   const polyRow = rows.find((r) => r.name === "Polymarket");
   const polyGap = poly && polyRow && poly.money.officialAllTimePnl !== null ? polyRow.net - poly.money.officialAllTimePnl : 0;
   const guessed = parseAmount(guess);
+  const shown = Math.round(total);
   const resultRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (revealed) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [revealed]);
 
   async function checkPolymarket() {
-    if (!walletInput.trim()) return;
+    if (!walletInput.trim() || polyState === "loading") return;
     setPolyState("loading");
     setPolyError("");
     setPoly(null);
+    setPolyCash("");
     try {
       const res = await fetch(`/api/polymarket?wallet=${encodeURIComponent(walletInput.trim())}`);
       const body = await res.json().catch(() => ({ error: "Polymarket took too long to answer. Try again in a minute, or type your totals in by hand." }));
@@ -140,6 +140,8 @@ export default function Home() {
     setPolyCash("");
     setDone({});
     setPoly(null);
+    setPolyState("idle");
+    setPolyError("");
     setWalletInput("");
     setRevealed(false);
   }
@@ -219,7 +221,7 @@ export default function Home() {
                   Loaded {poly.wallet.slice(0, 6)}…{poly.wallet.slice(-4)}.
                 </p>
                 <label className="mt-3 block max-w-xs text-sm">
-                  <span className="text-stone-600">Cash sitting in your Polymarket account</span>
+                  <span className="text-stone-600">Cash in your Polymarket account (not your portfolio total)</span>
                   <input
                     inputMode="decimal"
                     className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 outline-none focus:border-teal-700"
@@ -273,10 +275,10 @@ export default function Home() {
             <h2 className="text-lg font-semibold">3. Your real number</h2>
             <p className="mt-4 text-5xl font-semibold tabular-nums">{usd(total)}</p>
             <p className="mt-2 text-stone-600">
-              {total < 0 && `That's how much less you have than you put in. You put in ${usd(put)} in total.`}
-              {total === 0 && `You've got back about what you put in, ${usd(put)}.`}
-              {total > 0 && `You have this much more than you put in. That can go back in fast. Being up doesn't make it safe, and closing the doors still matters.`}
-              {guessed > 0 && total < 0 && ` You guessed ${usd(-guessed)}.`}
+              {shown < 0 && `That's how much less you have than you put in. You put in ${usd(put)} in total.`}
+              {shown === 0 && `You've got back about what you put in, ${usd(put)}.`}
+              {shown > 0 && `You have this much more than you put in. That can go back in fast. Being up doesn't make it safe, and closing the doors still matters.`}
+              {guessed > 0 && shown < 0 && ` You guessed ${usd(-guessed)}.`}
             </p>
 
             <div className="mt-6 overflow-x-auto">
@@ -307,16 +309,22 @@ export default function Home() {
             {poly && (
               <div className="mt-6 rounded-xl bg-stone-50 p-4 text-sm text-stone-700">
                 <p className="font-medium text-stone-900">Polymarket, bet by bet</p>
-                <p className="mt-1">
-                  From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that settled: {poly.bets.losing.toLocaleString()} lost and {poly.bets.winning.toLocaleString()}{" "}
-                  won. The losing ones cost {usd(Math.abs(poly.bets.lostOnLosers))}, and the biggest single loss was {usd(Math.abs(poly.bets.biggestLoss))}.
-                  {poly.bets.truncated && " Polymarket only shares your most recent 10,000 or so trades, so older bets aren't counted here."}
-                </p>
+                {poly.bets.winning + poly.bets.losing === 0 ? (
+                  <p className="mt-1">None of this wallet's bets have settled yet.</p>
+                ) : (
+                  <p className="mt-1">
+                    From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that settled: {poly.bets.losing.toLocaleString()} lost and {poly.bets.winning.toLocaleString()}{" "}
+                    won. The losing ones cost {usd(Math.abs(poly.bets.lostOnLosers))}, and the biggest single loss was {usd(Math.abs(poly.bets.biggestLoss))}.
+                    {poly.bets.truncated && " Polymarket only shares your most recent 10,000 or so trades, so older bets aren't counted here."}
+                  </p>
+                )}
                 {poly.money.officialAllTimePnl !== null && (
                   <p className="mt-2">
                     Polymarket's own all-time profit and loss for this wallet: {usd(poly.money.officialAllTimePnl)}.
-                    {Math.abs(polyGap) >= 5 &&
-                      ` That's ${usd(Math.abs(polyGap))} ${polyGap < 0 ? "better" : "worse"} than the number above. The usual reason is cash in the account you haven't entered, or money moved in or out without a bet.`}
+                    {polyGap <= -5 &&
+                      ` That's ${usd(-polyGap)} better than the number above. The usual reason is cash in the account you haven't entered above, or money moved in or out without a bet.`}
+                    {polyGap >= 5 &&
+                      ` Polymarket says you're down ${usd(polyGap)} more than the number above. Check you typed only your cash, not your portfolio total. Money sent straight from an exchange may not show here as a deposit. Go by the bigger loss.`}
                   </p>
                 )}
                 {!poly.money.cashFlowComplete && <p className="mt-2">This wallet has more deposits than we could read, so "Put in" may be too low.</p>}

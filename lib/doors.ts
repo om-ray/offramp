@@ -30,7 +30,7 @@ export const DOORS: Door[] = [
     what: "The US app and polymarket.com are separate accounts. Close both if you've used both. You can still withdraw your balance.",
     steps: [
       "US app: Account, then Responsible Trading, then Self-exclusion. Pick a term (up to permanent) and confirm twice.",
-      "polymarket.com: open Settings and look for self-exclusion. If you can't find it, email support@polymarket.com with the message below.",
+      "polymarket.com: open Settings and look for self-exclusion or account pause. If you can't find it, email support@polymarket.com with the message below.",
       "Withdraw whatever balance is left.",
     ],
     link: { label: "Polymarket US trust and safety", href: "https://polymarket.us/trust" },
