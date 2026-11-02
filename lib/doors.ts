@@ -27,13 +27,14 @@ export const DOORS: Door[] = [
   {
     id: "polymarket",
     name: "Polymarket",
-    what: "Self-exclusion on both the US app and polymarket.com. You can still withdraw your balance.",
+    what: "The US app and polymarket.com are separate accounts. Close both if you've used both. You can still withdraw your balance.",
     steps: [
       "US app: Account, then Responsible Trading, then Self-exclusion. Pick a term (up to permanent) and confirm twice.",
-      "polymarket.com: use the self-exclusion on the trust page and pick an end date. You can extend it but not lift it.",
+      "polymarket.com: open Settings and look for self-exclusion. If you can't find it, email support@polymarket.com with the message below.",
       "Withdraw whatever balance is left.",
     ],
     link: { label: "Polymarket US trust and safety", href: "https://polymarket.us/trust" },
+    message: supportMessage("trading and prediction markets on Polymarket", ""),
   },
   {
     id: "ic360",
@@ -72,7 +73,7 @@ export const DOORS: Door[] = [
     id: "webull",
     name: "Webull",
     what: "Ask support to opt you out of event contracts.",
-    steps: ["Email support@webull.com or call +1 888-828-0618 with the message below."],
+    steps: ["Email support@webull.com with the message below, or call +1 888-828-0618 on a weekday during business hours."],
     message: supportMessage("event contracts and prediction markets", ""),
   },
   {
@@ -83,15 +84,36 @@ export const DOORS: Door[] = [
     link: { label: "FanDuel self-exclusion", href: "https://support.fanduel.com/s/article/What-is-self-exclusion" },
   },
   {
+    id: "draftkings",
+    name: "DraftKings Predictions",
+    what: "Ask DraftKings to exclude you from Predictions and its sportsbook and casino.",
+    steps: ["Use Responsible Gaming in your DraftKings account if it offers self-exclusion, or contact support with the message below."],
+    message: supportMessage("DraftKings products, including DraftKings Predictions", ""),
+  },
+  {
+    id: "cryptocom",
+    name: "Crypto.com",
+    what: "Ask support to shut off prediction markets and sports event contracts on your account.",
+    steps: ["In the app, open Help and contact support. Send the message below."],
+    message: supportMessage("prediction markets and sports event contracts", ""),
+  },
+  {
+    id: "other",
+    name: "Anywhere else you've bet",
+    what: "Novig, PrizePicks, Underdog, ProphetX, sportsbooks, casinos. Every one needs its own request.",
+    steps: ["Look for self-exclusion under Responsible Gaming in the account settings.", "If there isn't one, send support the message below."],
+    message: supportMessage("betting, gaming and prediction market products", ""),
+  },
+  {
     id: "devices",
     name: "Block it on your phone and computer",
-    what: "A blocker stops the sites and apps on your devices, including ones you haven't signed up for yet.",
+    what: "A blocker stops gambling sites and apps on your devices, including ones you haven't signed up for yet. It can't block event contracts inside Robinhood, Coinbase or Webull, so do those above.",
     steps: [
-      "Gamban blocks gambling sites and apps on iPhone, Android, Mac and Windows. Michigan residents can get it free through the state.",
+      "Gamban blocks gambling sites and apps on iPhone, Android, Mac and Windows. Michigan has given out free Gamban licenses while they last.",
       "BetBlocker is free.",
       "Give the blocker's password or lock to someone you trust.",
     ],
-    link: { label: "Free Gamban for Michigan residents", href: "https://www.michigan.gov/mgcb/resources/responsible-gaming/gamban" },
+    link: { label: "Gamban", href: "https://gamban.com/" },
   },
 ];
 
@@ -102,3 +124,5 @@ export const HELPLINE = {
   sms: "sms:18006973738",
   chat: "https://www.ncpgambling.org/chat/",
 };
+
+export const CRISIS = { label: "988", tel: "tel:988" };

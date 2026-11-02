@@ -2,17 +2,24 @@ import { NextResponse } from "next/server";
 import { buildReport } from "@/lib/polymarket-report.js";
 import { resolveWallet } from "@/lib/polymarket-api.js";
 import { polymarketMoney } from "@/lib/polymarket-money";
+import { summarizeBets, type Position } from "@/lib/bets";
 
 export const maxDuration = 300;
 
-type Position = { status: string; totalPnl: number | null };
+function plainError(message: string): { error: string; status: number } {
+  if (/must match one public profile/i.test(message)) {
+    return { error: "We couldn't find exactly one polymarket.com profile with that name. Try the wallet address from your profile page.", status: 404 };
+  }
+  if (/429|rate/i.test(message)) return { error: "Polymarket is busy right now. Try again in a minute.", status: 503 };
+  return { error: "We couldn't read this wallet from Polymarket just now. Try again, or type your totals in by hand below.", status: 502 };
+}
 
 export async function GET(request: Request) {
   const input = new URL(request.url).searchParams.get("wallet")?.trim() ?? "";
+  if (!input) return NextResponse.json({ error: "Paste a username or wallet address first." }, { status: 400 });
   try {
     const wallet: string = await resolveWallet(input);
     const [money, report] = await Promise.all([polymarketMoney(wallet), buildReport({ wallet })]);
-    const resolved = (report.positions as Position[]).filter((p) => p.status === "resolved" && p.totalPnl !== null);
     return NextResponse.json({
       wallet,
       money,
@@ -20,14 +27,11 @@ export async function GET(request: Request) {
         from: report.coverage.earliestTradeAt,
         to: report.coverage.latestTradeAt,
         truncated: report.coverage.truncated,
-        trades: report.coverage.tradeCount,
-        winning: resolved.filter((p) => (p.totalPnl ?? 0) > 0).length,
-        losing: resolved.filter((p) => (p.totalPnl ?? 0) < 0).length,
-        lostOnLosers: resolved.reduce((n, p) => n + Math.min(0, p.totalPnl ?? 0), 0),
-        biggestLoss: Math.min(0, ...resolved.map((p) => p.totalPnl ?? 0)),
+        ...summarizeBets(report.positions as Position[]),
       },
     });
   } catch (err) {
-    return NextResponse.json({ error: (err as Error).message }, { status: 400 });
+    const { error, status } = plainError((err as Error).message);
+    return NextResponse.json({ error }, { status });
   }
 }

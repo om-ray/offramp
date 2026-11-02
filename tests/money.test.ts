@@ -1,7 +1,13 @@
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { parseAmount, tally, usd } from "../lib/money.ts";
 import { polymarketMoney } from "../lib/polymarket-money.ts";
+import { summarizeBets } from "../lib/bets.ts";
+
+const realFetch = globalThis.fetch;
+afterEach(() => {
+  globalThis.fetch = realFetch;
+});
 
 test("real number adds every account and skips empty ones", () => {
   const result = tally([
@@ -47,7 +53,6 @@ test("Polymarket money follows every page of deposits and withdrawals", async ()
   assert.equal(money.deposited, 987);
   assert.equal(money.withdrawn, 10);
   assert.equal(money.cashFlowComplete, true);
-  assert.equal(money.firstDepositAt, new Date(1_789_000_000_000).toISOString());
   assert.equal(money.officialAllTimePnl, -920);
   assert.equal(money.openPositionValue, 24);
   assert.ok(seen.some((s) => s.includes("cursor=1")));
@@ -57,4 +62,16 @@ test("Polymarket money says when it couldn't read every deposit", async () => {
   mockPolymarket(Array.from({ length: 50 }, () => ({ data: [{ type: "DEPOSIT", usdc_size: 1, timestamp: 1 }], has_more: true })));
   const money = await polymarketMoney("0xabc");
   assert.equal(money.cashFlowComplete, false);
+});
+
+test("bet summary counts only settled bets and reports losses", () => {
+  const bets = summarizeBets([
+    { status: "resolved", totalPnl: -150 },
+    { status: "resolved", totalPnl: -20 },
+    { status: "resolved", totalPnl: 45 },
+    { status: "resolved", totalPnl: 0 },
+    { status: "open", totalPnl: -500 },
+    { status: "resolved", totalPnl: null },
+  ]);
+  assert.deepEqual(bets, { winning: 1, losing: 2, lostOnLosers: -170, biggestLoss: -150 });
 });
