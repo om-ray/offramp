@@ -18,16 +18,16 @@ type PolyResult = {
   bets: { from: string | null; to: string | null; truncated: boolean; winning: number; losing: number; lostOnLosers: number; biggestLoss: number };
 };
 
-const PLATFORMS: { id: string; name: string; where: string }[] = [
+const PLATFORMS = [
   { id: "polymarket-us", name: "Polymarket US app", where: "Account, then activity or statements" },
   { id: "kalshi", name: "Kalshi", where: "kalshi.com, Account, Activity: export deposits and withdrawals" },
   { id: "robinhood", name: "Robinhood", where: "Account, Investing, Realized profit & loss, Prediction markets" },
   { id: "coinbase", name: "Coinbase", where: "Predictions portfolio" },
   { id: "webull", name: "Webull", where: "Event contracts history" },
   { id: "other", name: "Anything else", where: "DraftKings, FanDuel, Crypto.com, Novig, PrizePicks, sportsbooks" },
-];
+] as const satisfies readonly { id: string; name: string; where: string }[];
 
-const PLATFORM_DOORS: Record<string, string[]> = {
+const PLATFORM_DOORS: Record<(typeof PLATFORMS)[number]["id"], string[]> = {
   "polymarket-us": ["polymarket"],
   kalshi: ["kalshi"],
   robinhood: ["robinhood"],
