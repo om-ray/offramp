@@ -85,10 +85,34 @@ const quiet =
   "inline-flex min-h-11 items-center rounded-[4px] border border-line-strong px-4 font-medium text-ink transition-colors hover:border-ink active:translate-y-px";
 const link = "text-accent underline decoration-1 underline-offset-[3px] hover:decoration-2";
 
-function Heading({ n, children, aside }: { n: number; children: React.ReactNode; aside?: React.ReactNode }) {
+function bigSize(text: string) {
+  if (text.length > 11) return "text-[clamp(2.25rem,10vw,6.75rem)]";
+  if (text.length > 8) return "text-[clamp(2.75rem,12.5vw,6.75rem)]";
+  return "text-[clamp(3.5rem,17vw,6.75rem)]";
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 12 12" className={`size-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}>
+      <path d="M2 4.5 6 8.5 10 4.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Heading({
+  n,
+  children,
+  aside,
+  focusRef,
+}: {
+  n: number;
+  children: React.ReactNode;
+  aside?: React.ReactNode;
+  focusRef?: React.Ref<HTMLHeadingElement>;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <h2 className="font-serif text-[1.75rem] leading-tight tracking-[-0.01em] sm:text-[2rem]">
+      <h2 ref={focusRef} tabIndex={focusRef ? -1 : undefined} className="font-serif outline-none text-[1.75rem] leading-tight tracking-[-0.01em] sm:text-[2rem]">
         <span className="figure mr-3 text-muted" aria-hidden="true">
           {n}
         </span>
@@ -151,11 +175,13 @@ export default function Home() {
   const guessed = parseAmount(guess.replace(/^[-−]/, ""));
   const shown = Math.round(total);
   const resultRef = useRef<HTMLElement>(null);
+  const resultHeading = useRef<HTMLHeadingElement>(null);
   const lookup = useRef(0);
   useEffect(() => {
     if (!revealed) return;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     resultRef.current?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
+    resultHeading.current?.focus({ preventScroll: true });
   }, [revealed]);
 
   async function checkPolymarket() {
@@ -308,7 +334,7 @@ export default function Home() {
                     >
                       <span className="font-medium">{p.name}</span>
                       <span className="flex shrink-0 items-center gap-3 text-[0.9375rem] tabular-nums text-ink">
-                        {row ? `Net ${usd(row.net)}` : isOpen ? "Close" : "Add"}
+                        {row ? `Net ${usd(row.net)}` : isOpen ? "Hide" : "Add"}
                         <span
                           aria-hidden="true"
                           className={`flex size-7 items-center justify-center rounded-full border border-line-strong text-lg leading-none transition-transform ${isOpen ? "rotate-45" : ""}`}
@@ -317,26 +343,24 @@ export default function Home() {
                         </span>
                       </span>
                     </button>
-                    {isOpen && (
-                      <div id={`acct-${p.id}`} className="pb-5">
-                        <p className="text-sm text-muted">Where to find it: {p.where}</p>
-                        <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
-                          {FIELDS.map((f) => (
-                            <label key={f.key} className="min-w-0">
-                              <span className="block text-sm text-muted">{f.label}</span>
-                              <input
-                                inputMode="decimal"
-                                aria-label={`${p.name}: ${f.label}`}
-                                className={`${field} mt-1 px-2.5`}
-                                value={a[f.key]}
-                                onChange={(e) => setAmounts((all) => ({ ...all, [p.id]: { ...(all[p.id] ?? EMPTY), [f.key]: e.target.value } }))}
-                                placeholder="$0"
-                              />
-                            </label>
-                          ))}
-                        </div>
+                    <div id={`acct-${p.id}`} hidden={!isOpen} className="pb-5">
+                      <p className="text-sm text-muted">Where to find it: {p.where}</p>
+                      <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
+                        {FIELDS.map((f) => (
+                          <label key={f.key} className="min-w-0">
+                            <span className="block text-sm text-muted">{f.label}</span>
+                            <input
+                              inputMode="decimal"
+                              aria-label={`${p.name}: ${f.label}`}
+                              className={`${field} mt-1 px-2.5`}
+                              value={a[f.key]}
+                              onChange={(e) => setAmounts((all) => ({ ...all, [p.id]: { ...(all[p.id] ?? EMPTY), [f.key]: e.target.value } }))}
+                              placeholder="$0"
+                            />
+                          </label>
+                        ))}
                       </div>
-                    )}
+                    </div>
                   </li>
                 );
               })}
@@ -351,18 +375,17 @@ export default function Home() {
 
         {revealed && (
           <section ref={resultRef} className="mt-14 scroll-mt-6 border-t border-line pt-10">
-            <Heading n={3}>Your real number</Heading>
-            <p className="figure arrive mt-6 break-words text-[clamp(3.5rem,17vw,6.75rem)] leading-[0.95] tracking-[-0.02em]">
-              {shown < 0 && <span className="mr-[-0.06em]">−</span>}
-              {usd(Math.abs(total))}
-            </p>
+            <Heading n={3} focusRef={resultHeading}>
+              Your real number
+            </Heading>
+            <p className={`figure arrive mt-6 whitespace-nowrap leading-[0.95] tracking-[-0.02em] ${bigSize(usd(total))}`}>{usd(total)}</p>
             <div className="arrive-late">
               <p className="mt-6 font-serif text-[1.3125rem] leading-snug">
                 {shown < 0 && `That's how much less you have than you put in. You put in ${usd(put)} in total.`}
                 {shown === 0 && `You've got back about what you put in, ${usd(put)}.`}
                 {shown > 0 && `You have this much more than you put in. That can go back in fast. Being up doesn't make it safe, and closing the doors still matters.`}
               </p>
-              {guessed > 0 && (
+              {guessed > 0 && shown < 0 && (
                 <div className="mt-6 flex items-baseline justify-between gap-4 border-t border-line pt-3 text-muted">
                   <span>Your guess</span>
                   <span className="figure text-xl">{usd(-guessed)}</span>
@@ -505,17 +528,15 @@ export default function Home() {
                         aria-expanded={isOpen}
                         aria-controls={`door-${d.id}`}
                         onClick={() => setExpanded((x) => ({ ...x, [d.id]: !isOpen }))}
-                        className="flex w-full items-baseline justify-between gap-4 text-left"
+                        className="-mt-2 flex min-h-11 w-full items-center justify-between gap-4 text-left"
                       >
                         <span className={`font-serif text-[1.375rem] leading-tight ${done[d.id] ? "text-muted line-through decoration-1" : ""}`}>{d.name}</span>
-                        <span className="shrink-0 text-sm text-ink print:hidden">
-                          {done[d.id] ? "Done" : isOpen ? "Hide steps" : "Show steps"}
-                          <span aria-hidden="true" className={`ml-1.5 inline-block transition-transform ${isOpen ? "rotate-180" : ""}`}>
-                            ⌄
-                          </span>
+                        <span className="flex shrink-0 items-center gap-1.5 text-sm text-ink print:hidden">
+                          {isOpen ? "Hide steps" : "Show steps"}
+                          <Chevron open={isOpen} />
                         </span>
                       </button>
-                      <p className="mt-1.5 leading-relaxed text-muted">{d.what}</p>
+                      <p className="mt-0.5 leading-relaxed text-muted">{d.what}</p>
                       <div id={`door-${d.id}`} className={isOpen ? "" : "hidden print:block"}>
                         <ol className="mt-3 list-decimal space-y-1.5 pl-5 leading-relaxed marker:text-muted">
                           {d.steps.map((s) => (

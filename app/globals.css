@@ -50,7 +50,6 @@ body {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
-  border-radius: 2px;
 }
 
 input:focus-visible {
@@ -95,5 +94,12 @@ input:focus-visible {
     --ink: #111111;
     --muted: #444444;
     --line: #cccccc;
+    --line-strong: #8c8980;
+    --accent: #2d4f80;
+    --accent-wash: #e4e8ef;
+  }
+
+  html {
+    color-scheme: light;
   }
 }
