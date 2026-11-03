@@ -530,7 +530,7 @@ export default function Home() {
                         onClick={() => setExpanded((x) => ({ ...x, [d.id]: !isOpen }))}
                         className="-mt-2 flex min-h-11 w-full items-center justify-between gap-4 text-left"
                       >
-                        <span className={`font-serif text-[1.375rem] leading-tight ${done[d.id] ? "text-muted line-through decoration-1" : ""}`}>{d.name}</span>
+                        <span className={`font-serif text-[1.375rem] leading-tight ${done[d.id] ? "text-muted line-through decoration-1" : ""}`}>{d.name}</span>{" "}
                         <span className="flex shrink-0 items-center gap-1.5 text-sm text-ink print:hidden">
                           {isOpen ? "Hide" : "Show"}
                           <span className="max-[400px]:sr-only">steps</span>
@@ -538,7 +538,7 @@ export default function Home() {
                         </span>
                       </button>
                       <p className="mt-0.5 leading-relaxed text-muted">{d.what}</p>
-                      <div id={`door-${d.id}`} className={isOpen ? "" : "hidden print:block"}>
+                      <div id={`door-${d.id}`} className={`[overflow-wrap:anywhere] ${isOpen ? "" : "hidden print:block"}`}>
                         <ol className="mt-3 list-decimal space-y-1.5 pl-5 leading-relaxed marker:text-muted">
                           {d.steps.map((s) => (
                             <li key={s} className="pl-1">
