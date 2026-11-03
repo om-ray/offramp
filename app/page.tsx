@@ -261,7 +261,7 @@ export default function Home() {
               aria-label="Your guess"
               aria-describedby="guess-hint"
               inputMode="decimal"
-              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink outline-none placeholder:text-line-strong placeholder:italic"
+              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink placeholder:text-line-strong placeholder:italic"
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
               placeholder="your guess"
@@ -427,18 +427,18 @@ export default function Home() {
                       <span className="font-medium">{r.name}</span>
                       <span className="figure shrink-0 text-xl">{usd(r.net)}</span>
                     </div>
-                    <dl className="mt-1 grid grid-cols-3 gap-x-3 text-sm tabular-nums text-muted">
-                      <div className="min-w-0">
+                    <dl className="mt-1 flex flex-wrap gap-x-6 gap-y-2 text-sm tabular-nums text-muted">
+                      <div className="min-w-[5.5rem]">
                         <dt>Put in</dt>
-                        <dd className="truncate text-ink">{usd(r.deposited)}</dd>
+                        <dd className="whitespace-nowrap text-ink">{usd(r.deposited)}</dd>
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-[5.5rem]">
                         <dt>Took out</dt>
-                        <dd className="truncate text-ink">{usd(r.withdrawn)}</dd>
+                        <dd className="whitespace-nowrap text-ink">{usd(r.withdrawn)}</dd>
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-[5.5rem]">
                         <dt>Still in it</dt>
-                        <dd className="truncate text-ink">{usd(r.left)}</dd>
+                        <dd className="whitespace-nowrap text-ink">{usd(r.left)}</dd>
                       </div>
                     </dl>
                   </li>
