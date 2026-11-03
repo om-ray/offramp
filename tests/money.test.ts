@@ -1,7 +1,7 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { parseAmount, tally, usd } from "../lib/money.ts";
-import { finishedBets, polymarketMoney, summarizeBets } from "../lib/polymarket.ts";
+import { finishedBets, polymarketBets, polymarketMoney, summarizeBets } from "../lib/polymarket.ts";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -24,11 +24,12 @@ test("real number adds every account and skips empty ones", () => {
 
 type Row = { type: string; usdc_size: number };
 
-function mockPolymarket(pages: { data: Row[]; more: boolean }[]) {
+function mockPolymarket(pages: { data: Row[]; more: boolean }[], delayMs = 0) {
   const seen: string[] = [];
   globalThis.fetch = (async (input: URL) => {
     const url = new URL(input);
     seen.push(url.pathname + url.search);
+    await new Promise((r) => setTimeout(r, delayMs));
     if (url.pathname === "/v2/activity") {
       const i = Number(url.searchParams.get("cursor") ?? 0);
       return Response.json({ data: pages[i].data, pagination: { has_more: pages[i].more, next_cursor: pages[i].more ? String(i + 1) : null } });
@@ -50,10 +51,23 @@ test("Polymarket money follows every page of deposits and withdrawals", async ()
   assert.ok(seen.some((s) => s.includes("cursor=1") && s.includes("start=1")));
 });
 
-test("Polymarket money says when it ran out of time before the last deposit", async () => {
-  mockPolymarket(Array.from({ length: 3 }, () => ({ data: [{ type: "DEPOSIT", usdc_size: 1 }], more: true })));
-  const money = await polymarketMoney("0xabc", Date.now() - 1);
+test("Polymarket money keeps what it read and says so when time runs out", async () => {
+  mockPolymarket(Array.from({ length: 5 }, () => ({ data: [{ type: "DEPOSIT", usdc_size: 1 }], more: true })), 60);
+  const money = await polymarketMoney("0xabc", Date.now() + 100);
+  assert.equal(money.deposited, 2);
   assert.equal(money.cashFlowComplete, false);
+});
+
+test("bet lookup asks Polymarket for every settled combo, wins included", async () => {
+  const seen: string[] = [];
+  globalThis.fetch = (async (input: URL) => {
+    const url = new URL(input);
+    seen.push(url.pathname + url.search);
+    return Response.json({ data: [], pagination: { has_more: false, next_cursor: null } });
+  }) as typeof fetch;
+  await polymarketBets("0xabc", Date.now() + 10_000);
+  const combos = new URL("https://x" + seen.find((s) => s.startsWith("/v2/positions/combos"))).searchParams;
+  assert.equal(combos.get("status"), "RESOLVED_WIN,RESOLVED_LOSS,RESOLVED_PARTIAL");
 });
 
 test("finished bets include held losers, sold bets and settled combos, not live bets", () => {
@@ -67,13 +81,13 @@ test("finished bets include held losers, sold bets and settled combos, not live 
   });
   const bets = finishedBets(
     [pos("REDEEMABLE", -0.5, -150), pos("OPEN", 0, -500)],
-    [pos("CLOSED", 45, 45), pos("CLOSED", -20, -20), pos("CLOSED", 0, 0)],
+    [pos("CLOSED", 45, 45), pos("CLOSED", -20, -20), pos("CLOSED", 0, 0), pos("CLOSED", -0.004, -0.004)],
     [combo("RESOLVED_LOSS", 5, 0), combo("OPEN", 9, 0), combo("RESOLVED_WIN", 2, 12)],
   );
   assert.deepEqual(summarizeBets(bets), {
     winning: 2,
     losing: 3,
-    lostOnLosers: -175,
+    lostOnLosers: -175.004,
     biggestLoss: -150,
     from: new Date(1_789_000_000_000).toISOString(),
     to: new Date(1_792_000_000_000).toISOString(),

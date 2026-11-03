@@ -4,6 +4,7 @@ export type Door = {
   what: string;
   steps: string[];
   link?: { label: string; href: string };
+  extraLink?: { label: string; href: string };
   message?: string;
   note?: string;
 };
@@ -15,7 +16,7 @@ export const DOORS: Door[] = [
   {
     id: "kalshi",
     name: "Kalshi",
-    what: "Self-exclusion in your account settings. It can't be lifted until it runs out.",
+    what: "Self-exclusion in your account settings, for a term you pick.",
     steps: [
       "Close or sell any open positions first. You can't sell them once the exclusion starts.",
       "On kalshi.com open the menu, then Responsible Risk Management. In the app it's under your account settings.",
@@ -30,10 +31,11 @@ export const DOORS: Door[] = [
     what: "The US app and polymarket.com are separate accounts. Close both if you've used both. You can still withdraw your balance.",
     steps: [
       "US app: Account, then Responsible Trading, then Self-exclusion. Pick a term (up to permanent) and confirm twice.",
-      "polymarket.com: open Settings and look for self-exclusion or account pause. If you can't find it, email support@polymarket.com with the message below.",
+      "polymarket.com: take a break from the trust page. Pick an end date. It starts right away and can't be shortened or lifted, and you can still sell what you hold. If you can't find it, email support@polymarket.com with the message below.",
       "Withdraw whatever balance is left.",
     ],
     link: { label: "Polymarket US trust and safety", href: "https://polymarket.us/trust" },
+    extraLink: { label: "polymarket.com trust page", href: "https://polymarket.com/trust" },
     message: supportMessage("trading and prediction markets on Polymarket", ""),
   },
   {
@@ -72,8 +74,12 @@ export const DOORS: Door[] = [
   {
     id: "webull",
     name: "Webull",
-    what: "Ask support to opt you out of event contracts.",
-    steps: ["Email support@webull.com with the message below, or call +1 888-828-0618 on a weekday during business hours."],
+    what: "Webull has an opt-out in the app. It can't be reversed for the time you pick.",
+    steps: [
+      "Account, then your Event Contract account, then the menu at the top right, then Voluntary Opt-Out. Pick the longest time.",
+      "For a permanent block, also email support@webull.com with the message below, or call +1 888-828-0618 on a weekday during business hours.",
+    ],
+    link: { label: "Webull event contract opt-out", href: "https://www.webull.com/help/faq/11176-Event-Contract-Eligibility-Restrictions-and-Opt-Out" },
     message: supportMessage("event contracts and prediction markets", ""),
   },
   {
@@ -86,8 +92,9 @@ export const DOORS: Door[] = [
   {
     id: "draftkings",
     name: "DraftKings Predictions",
-    what: "Ask DraftKings to exclude you from Predictions and its sportsbook and casino.",
-    steps: ["Use Responsible Gaming in your DraftKings account if it offers self-exclusion, or contact support with the message below."],
+    what: "DraftKings self-exclusion also blocks Predictions (event contracts).",
+    steps: ["Use Responsible Gaming in your DraftKings account and self-exclude for the longest term. If you get stuck, send support the message below."],
+    link: { label: "DraftKings self-exclusion", href: "https://rg.draftkings.com/breaks/self-exclusion" },
     message: supportMessage("DraftKings products, including DraftKings Predictions", ""),
   },
   {

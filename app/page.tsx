@@ -101,7 +101,7 @@ export default function Home() {
   );
   const polyRow = rows.find((r) => r.name === "Polymarket");
   const polyGap = poly && polyRow && poly.money.officialAllTimePnl !== null ? polyRow.net - poly.money.officialAllTimePnl : 0;
-  const guessed = parseAmount(guess);
+  const guessed = parseAmount(guess.replace(/^[-−]/, ""));
   const shown = Math.round(total);
   const resultRef = useRef<HTMLElement>(null);
   const lookup = useRef(0);
@@ -176,7 +176,7 @@ export default function Home() {
           <h1 className="mt-2 text-3xl font-semibold leading-tight sm:text-4xl">See what prediction markets have really cost you. Then close every door.</h1>
           <p className="mt-4 text-stone-600">
             Kalshi, Polymarket and the event contracts inside Robinhood, Coinbase and Webull aren't covered by a sportsbook self-exclusion. This puts your real number in one place
-            and walks you through shutting each one. Your numbers stay in this browser. A Polymarket username is looked up in Polymarket's public data.
+            and walks you through shutting each one. Your numbers stay in this browser. A Polymarket username goes through our server to Polymarket's public data and isn't stored.
           </p>
         </header>
 
@@ -285,6 +285,14 @@ export default function Home() {
               {shown > 0 && `You have this much more than you put in. That can go back in fast. Being up doesn't make it safe, and closing the doors still matters.`}
               {guessed > 0 && shown < 0 && ` You guessed ${usd(-guessed)}.`}
             </p>
+            {poly && poly.money.officialAllTimePnl !== null && poly.money.officialAllTimePnl < 0 && polyGap >= 5 && (
+              <p className="mt-2 font-medium text-stone-900">
+                Polymarket's own number for this wallet is a bigger loss, {usd(poly.money.officialAllTimePnl)}. Go by that one for Polymarket.
+              </p>
+            )}
+            {poly && !poly.money.cashFlowComplete && (
+              <p className="mt-2 font-medium text-stone-900">We couldn't read all of this wallet's deposits and withdrawals, so the Polymarket row is incomplete. Go by Polymarket's own number below.</p>
+            )}
 
             <div className="mt-6 overflow-x-auto">
               <table className="w-full text-left text-sm tabular-nums">
@@ -325,14 +333,13 @@ export default function Home() {
                 )}
                 {poly.money.officialAllTimePnl !== null && (
                   <p className="mt-2">
-                    Polymarket's own all-time profit and loss for this wallet: {usd(poly.money.officialAllTimePnl)}.
+                    Polymarket's own profit and loss on this wallet's finished bets: {usd(poly.money.officialAllTimePnl)}.
                     {polyGap <= -5 &&
-                      ` That's ${usd(-polyGap)} better than your Polymarket row above. The usual reason is cash in the account you haven't entered, or money moved in or out without a bet.`}
+                      ` That's ${usd(-polyGap)} better than your Polymarket row above. Likely reasons: open bets that are down right now, cash in the account you haven't entered, or money moved in or out without a bet.`}
                     {polyGap >= 5 &&
-                      ` Polymarket shows ${usd(polyGap)} less than your Polymarket row above. Check you typed only your cash, not your portfolio total. Money sent straight from an exchange may not show here as a deposit. ${poly.money.officialAllTimePnl < 0 ? "Go by the bigger loss." : "Go by Polymarket's number."}`}
+                      ` That's ${usd(polyGap)} worse than your Polymarket row above. Likely reasons: open bets that are up right now, cash you counted twice (type only cash, not your portfolio total), or money sent straight from an exchange that doesn't show here as a deposit.`}
                   </p>
                 )}
-                {!poly.money.cashFlowComplete && <p className="mt-2">This wallet has more deposits than we could read, so "Put in" may be too low.</p>}
                 {poly.money.openPositionValue === null && (
                   <p className="mt-2">We couldn't read the value of your open bets, so they're counted as $0. Add them to the cash box if you know it.</p>
                 )}
@@ -384,6 +391,11 @@ export default function Home() {
                 {d.link && (
                   <a className="ml-7 mt-2 inline-block text-sm text-teal-800 underline print:hidden" href={d.link.href} target="_blank" rel="noreferrer">
                     {d.link.label}
+                  </a>
+                )}
+                {d.extraLink && (
+                  <a className="ml-4 mt-2 inline-block text-sm text-teal-800 underline print:hidden" href={d.extraLink.href} target="_blank" rel="noreferrer">
+                    {d.extraLink.label}
                   </a>
                 )}
               </li>

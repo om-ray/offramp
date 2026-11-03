@@ -2,31 +2,57 @@ import { NextResponse } from "next/server";
 import { PolymarketError, polymarketBets, polymarketMoney, resolveWallet } from "@/lib/polymarket";
 
 export const maxDuration = 300;
-const BUDGET_MS = 240_000;
+const BUDGET_MS = 230_000;
+const CACHE_MS = 15 * 60_000;
+const INPUT = /^@?[A-Za-z0-9_.-]{1,64}$/;
 
 const MESSAGES = {
   "not-found": { error: "We couldn't find exactly one polymarket.com profile with that name. Try the wallet address from your profile page.", status: 404 },
-  "bad-address": { error: "That address isn't a Polymarket account. Check it against your profile page.", status: 400 },
   busy: { error: "Polymarket is busy right now. Try again in a minute.", status: 503 },
   upstream: { error: "We couldn't read this wallet from Polymarket just now. Try again, or type your totals in by hand below.", status: 502 },
 };
 
+type Lookup = { body: unknown; status: number };
+const cache = new Map<string, { at: number; result: Promise<Lookup> }>();
+
+async function lookup(wallet: string): Promise<Lookup> {
+  const deadline = Date.now() + BUDGET_MS;
+  const [money, bets] = await Promise.all([polymarketMoney(wallet, deadline), polymarketBets(wallet, deadline)]);
+  const empty = !money.deposited && !money.withdrawn && !money.openPositionValue && !money.officialAllTimePnl && !bets.positionCount;
+  if (empty) {
+    return {
+      status: 404,
+      body: { error: "There's no Polymarket activity at this address. Use the wallet address shown on your polymarket.com profile, not a MetaMask or exchange address." },
+    };
+  }
+  const { winning, losing, lostOnLosers, biggestLoss, from, to, complete } = bets;
+  return { status: 200, body: { wallet, money, bets: { winning, losing, lostOnLosers, biggestLoss, from, to, truncated: !complete } } };
+}
+
+function cachedLookup(wallet: string): Promise<Lookup> {
+  const now = Date.now();
+  for (const [key, entry] of cache) if (now - entry.at > CACHE_MS) cache.delete(key);
+  const hit = cache.get(wallet);
+  if (hit) return hit.result;
+  const result = lookup(wallet);
+  cache.set(wallet, { at: now, result });
+  result.then(
+    (r) => r.status !== 200 && cache.delete(wallet),
+    () => cache.delete(wallet),
+  );
+  return result;
+}
+
 export async function GET(request: Request) {
+  const secret = process.env.EDGE_SECRET;
+  if (secret && request.headers.get("x-edge-auth") !== secret) return new NextResponse(null, { status: 404 });
   const input = new URL(request.url).searchParams.get("wallet")?.trim() ?? "";
   if (!input) return NextResponse.json({ error: "Paste a username or wallet address first." }, { status: 400 });
-  const deadline = Date.now() + BUDGET_MS;
+  if (!INPUT.test(input)) return NextResponse.json({ error: "That doesn't look like a Polymarket username or wallet address." }, { status: 400 });
   try {
     const wallet = await resolveWallet(input);
-    const [money, bets] = await Promise.all([polymarketMoney(wallet, deadline), polymarketBets(wallet, deadline)]);
-    const empty = !money.deposited && !money.withdrawn && !money.openPositionValue && !money.officialAllTimePnl && !bets.positionCount;
-    if (empty) {
-      return NextResponse.json(
-        { error: "There's no Polymarket activity at this address. Use the wallet address shown on your polymarket.com profile, not a MetaMask or exchange address." },
-        { status: 404 },
-      );
-    }
-    const { winning, losing, lostOnLosers, biggestLoss, from, to, complete } = bets;
-    return NextResponse.json({ wallet, money, bets: { winning, losing, lostOnLosers, biggestLoss, from, to, truncated: !complete } });
+    const { body, status } = await cachedLookup(wallet);
+    return NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     const kind = err instanceof PolymarketError ? err.kind : "upstream";
     const { error, status } = MESSAGES[kind];

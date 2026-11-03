@@ -3,5 +3,6 @@
   "main": "worker.js",
   "compatibility_date": "2026-10-01",
   "workers_dev": false,
-  "routes": [{ "pattern": "offramp.omray.dev", "custom_domain": true }]
+  "routes": [{ "pattern": "offramp.omray.dev", "custom_domain": true }],
+  "ratelimits": [{ "name": "LOOKUPS", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }]
 }

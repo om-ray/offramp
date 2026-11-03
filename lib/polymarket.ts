@@ -5,7 +5,7 @@ const PAGE = "1000";
 
 type Page<T> = { data: T[]; pagination?: { has_more?: boolean; next_cursor?: string | null } };
 
-export type FailureKind = "not-found" | "busy" | "bad-address" | "upstream";
+export type FailureKind = "not-found" | "busy" | "upstream";
 
 export class PolymarketError extends Error {
   readonly kind: FailureKind;
@@ -15,18 +15,19 @@ export class PolymarketError extends Error {
   }
 }
 
-async function getJson<T>(base: string, path: string, params: Record<string, string>): Promise<T> {
+async function getJson<T>(base: string, path: string, params: Record<string, string>, deadline: number): Promise<T> {
   const url = new URL(path, base);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   for (let attempt = 0; ; attempt++) {
-    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(90_000) });
-    if (res.status === 429 && attempt < 3) {
-      const wait = Number(res.headers.get("retry-after")) || 2 ** attempt;
-      await new Promise((r) => setTimeout(r, Math.min(wait, 10) * 1000));
+    const left = deadline - Date.now();
+    if (left <= 0) throw new PolymarketError("Ran out of time reading Polymarket.", "upstream");
+    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(Math.min(60_000, left)) });
+    if (res.status === 429) {
+      const wait = Math.min(Number(res.headers.get("retry-after")) || 2 ** attempt, 10) * 1000;
+      if (attempt >= 3 || Date.now() + wait >= deadline) throw new PolymarketError("Polymarket is busy right now.", "busy");
+      await new Promise((r) => setTimeout(r, wait));
       continue;
     }
-    if (res.status === 429) throw new PolymarketError("Polymarket is busy right now.", "busy");
-    if (res.status === 400) throw new PolymarketError(`Polymarket rejected ${url.pathname}`, "bad-address");
     if (!res.ok) throw new PolymarketError(`Polymarket returned ${res.status} for ${url.pathname}`, "upstream");
     return res.json() as Promise<T>;
   }
@@ -35,11 +36,20 @@ async function getJson<T>(base: string, path: string, params: Record<string, str
 async function walk<T>(path: string, params: Record<string, string>, deadline: number): Promise<{ rows: T[]; complete: boolean }> {
   const rows: T[] = [];
   let cursor: string | undefined;
+  const seen = new Set<string>();
   while (Date.now() < deadline) {
-    const body = await getJson<Page<T>>(DATA, path, cursor ? { ...params, cursor } : { ...params, limit: PAGE });
+    let body: Page<T>;
+    try {
+      body = await getJson<Page<T>>(DATA, path, cursor ? { ...params, cursor } : { ...params, limit: PAGE }, deadline);
+    } catch (err) {
+      if (rows.length && !(err instanceof PolymarketError && err.kind === "busy")) return { rows, complete: false };
+      throw err;
+    }
     rows.push(...(body.data ?? []));
     cursor = body.pagination?.next_cursor ?? undefined;
     if (!cursor) return { rows, complete: true };
+    if (seen.has(cursor)) return { rows, complete: false };
+    seen.add(cursor);
   }
   return { rows, complete: false };
 }
@@ -48,7 +58,7 @@ export async function resolveWallet(input: string): Promise<string> {
   const query = input.trim().replace(/^@/, "");
   if (ADDRESS.test(query)) return query.toLowerCase();
   type Profile = { name?: string; pseudonym?: string; proxyWallet?: string };
-  const result = await getJson<{ profiles?: Profile[] }>(GAMMA, "/public-search", { q: query, search_profiles: "true", limit_per_type: "20" });
+  const result = await getJson<{ profiles?: Profile[] }>(GAMMA, "/public-search", { q: query, search_profiles: "true", limit_per_type: "20" }, Date.now() + 30_000);
   const wallets = new Set(
     (result.profiles ?? [])
       .filter((p) => [p.name, p.pseudonym].some((n) => n?.toLowerCase() === query.toLowerCase()))
@@ -74,8 +84,8 @@ export async function polymarketMoney(wallet: string, deadline: number): Promise
       { user: wallet, type: "DEPOSIT,WITHDRAWAL", exclude_deposits_withdrawals: "false", start: "1" },
       deadline,
     ),
-    getJson<{ data: { pnl: number } | null }>(DATA, "/v2/leaderboard", { user: wallet, time_period: "all" }).catch(() => null),
-    getJson<{ data: { value: number } | null }>(DATA, "/v2/value", { user: wallet }).catch(() => null),
+    getJson<{ data: { pnl: number } | null }>(DATA, "/v2/leaderboard", { user: wallet, time_period: "all" }, deadline).catch(() => null),
+    getJson<{ data: { value: number } | null }>(DATA, "/v2/value", { user: wallet }, deadline).catch(() => null),
   ]);
   const sum = (type: string) => flows.rows.filter((r) => r.type === type).reduce((n, r) => n + (r.usdc_size || 0), 0);
   const pnl = board?.data?.pnl;
@@ -113,8 +123,8 @@ export function summarizeBets(bets: FinishedBet[]) {
   const starts = bets.map((b) => b.startedAt).filter((t) => t > 0);
   const ends = bets.map((b) => b.endedAt).filter((t) => t > 0);
   return {
-    winning: pnls.filter((p) => p > 0).length,
-    losing: pnls.filter((p) => p < 0).length,
+    winning: pnls.filter((p) => p >= 0.01).length,
+    losing: pnls.filter((p) => p <= -0.01).length,
     lostOnLosers: pnls.reduce((n, p) => n + Math.min(0, p), 0),
     biggestLoss: Math.min(0, ...pnls),
     from: starts.length ? new Date(Math.min(...starts) * 1000).toISOString() : null,
@@ -126,7 +136,7 @@ export async function polymarketBets(wallet: string, deadline: number) {
   const [open, closed, combos] = await Promise.all([
     walk<Position>("/v2/positions", { user: wallet, filter_amount: "0", sort_by: "TIMESTAMP" }, deadline),
     walk<Position>("/v2/positions", { user: wallet, status: "CLOSED", sort_by: "TIMESTAMP" }, deadline),
-    walk<Combo>("/v2/positions/combos", { user: wallet }, deadline),
+    walk<Combo>("/v2/positions/combos", { user: wallet, status: "RESOLVED_WIN,RESOLVED_LOSS,RESOLVED_PARTIAL", sort_by: "UPDATED" }, deadline),
   ]);
   return {
     ...summarizeBets(finishedBets(open.rows, closed.rows, combos.rows)),
