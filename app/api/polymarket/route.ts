@@ -40,11 +40,16 @@ function cachedLookup(wallet: string, deadline: number): Promise<Lookup> {
   cache.set(wallet, entry);
   result.then(
     (r) => {
-      if (r.status !== 200) return cache.delete(wallet);
+      if (r.status !== 200) {
+        if (cache.get(wallet) === entry) cache.delete(wallet);
+        return;
+      }
       entry.at = Date.now();
       if (!r.complete) entry.ttl = PARTIAL_CACHE_MS;
     },
-    () => cache.delete(wallet),
+    () => {
+      if (cache.get(wallet) === entry) cache.delete(wallet);
+    },
   );
   return result;
 }
