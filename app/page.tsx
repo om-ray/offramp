@@ -253,7 +253,7 @@ export default function Home() {
           <p id="guess-hint" className="mt-3 leading-relaxed text-muted">
             Roughly how much do you think you&apos;re down, across everything?
           </p>
-          <label className="mt-5 flex max-w-[16rem] items-baseline gap-2 border-b-2 border-line-strong pb-1 focus-within:border-accent">
+          <label className="mt-5 flex max-w-[16rem] items-baseline gap-2 rounded-[2px] border-b-2 border-line-strong pb-1 outline-offset-4 focus-within:border-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
             <span className="figure text-[2.5rem] leading-none text-muted" aria-hidden="true">
               $
             </span>
@@ -261,7 +261,7 @@ export default function Home() {
               aria-label="Your guess"
               aria-describedby="guess-hint"
               inputMode="decimal"
-              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink placeholder:text-line-strong placeholder:italic"
+              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink focus-visible:outline-none placeholder:text-line-strong placeholder:italic"
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
               placeholder="your guess"
@@ -532,7 +532,8 @@ export default function Home() {
                       >
                         <span className={`font-serif text-[1.375rem] leading-tight ${done[d.id] ? "text-muted line-through decoration-1" : ""}`}>{d.name}</span>
                         <span className="flex shrink-0 items-center gap-1.5 text-sm text-ink print:hidden">
-                          {isOpen ? "Hide steps" : "Show steps"}
+                          {isOpen ? "Hide" : "Show"}
+                          <span className="max-[400px]:sr-only">steps</span>
                           <Chevron open={isOpen} />
                         </span>
                       </button>
@@ -599,8 +600,8 @@ export default function Home() {
 
         <footer className="mt-16 border-t border-line pt-6 text-sm leading-relaxed text-muted">
           Talk to someone, free, 24/7:{" "}
-          <a className={`${link} whitespace-nowrap`} href={HELPLINE.tel}>
-            {HELPLINE.label} ({HELPLINE.number})
+          <a className={link} href={HELPLINE.tel}>
+            <span className="whitespace-nowrap">{HELPLINE.label}</span> <span className="whitespace-nowrap">({HELPLINE.number})</span>
           </a>
           ,{" "}
           <a className={link} href={HELPLINE.sms}>
