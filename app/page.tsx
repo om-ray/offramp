@@ -202,7 +202,7 @@ export default function Home() {
           <div className="mt-5">
             <h3 className="font-medium">Polymarket (polymarket.com)</h3>
             <p className="mt-1 text-sm text-stone-600">
-              Paste your polymarket.com username or wallet address. Deposits, withdrawals and recent bets are public, so this fills itself in. If you use the Polymarket US app,
+              Paste your polymarket.com username or wallet address. Deposits, withdrawals and your bets are public, so this fills itself in. If you use the Polymarket US app,
               type it in below instead.
             </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
@@ -315,12 +315,12 @@ export default function Home() {
               <div className="mt-6 rounded-xl bg-stone-50 p-4 text-sm text-stone-700">
                 <p className="font-medium text-stone-900">Polymarket, bet by bet</p>
                 {poly.bets.winning + poly.bets.losing === 0 ? (
-                  <p className="mt-1">None of this wallet's bets have settled yet.</p>
+                  <p className="mt-1">None of this wallet's bets have finished yet.</p>
                 ) : (
                   <p className="mt-1">
-                    From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that settled: {poly.bets.losing.toLocaleString()} lost and {poly.bets.winning.toLocaleString()}{" "}
+                    From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that are finished (settled or sold): {poly.bets.losing.toLocaleString()} lost and {poly.bets.winning.toLocaleString()}{" "}
                     won. The losing ones cost {usd(Math.abs(poly.bets.lostOnLosers))}, and the biggest single loss was {usd(Math.abs(poly.bets.biggestLoss))}.
-                    {poly.bets.truncated && " Polymarket only shares your most recent 10,000 or so trades, so older bets aren't counted here."}
+                    {poly.bets.truncated && " This wallet has too many bets to read in one go, so only the most recent ones are counted here."}
                   </p>
                 )}
                 {poly.money.officialAllTimePnl !== null && (
