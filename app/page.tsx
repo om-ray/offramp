@@ -202,8 +202,8 @@ export default function Home() {
           <div className="mt-5">
             <h3 className="font-medium">Polymarket (polymarket.com)</h3>
             <p className="mt-1 text-sm text-stone-600">
-              Paste your polymarket.com username or wallet address. Deposits, withdrawals and your bets are public, so this fills itself in. If you use the Polymarket US app,
-              type it in below instead.
+              Paste your polymarket.com username or wallet address. Deposits, withdrawals and your bets are public, so this fills itself in. If you use the Polymarket US app, type
+              it in below instead.
             </p>
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <input
@@ -287,11 +287,14 @@ export default function Home() {
             </p>
             {poly && poly.money.officialAllTimePnl !== null && poly.money.officialAllTimePnl < 0 && polyGap >= 5 && (
               <p className="mt-2 font-medium text-stone-900">
-                Polymarket says your finished bets alone lost {usd(poly.money.officialAllTimePnl)}, more than the Polymarket row shows. See below for why they differ.
+                Polymarket's own profit and loss for this wallet is {usd(poly.money.officialAllTimePnl)}, a bigger loss than the Polymarket row shows. See below for why they can
+                differ.
               </p>
             )}
             {poly && !poly.money.cashFlowComplete && (
-              <p className="mt-2 font-medium text-stone-900">We couldn't read all of this wallet's deposits and withdrawals, so the Polymarket row is incomplete. Go by Polymarket's own number below.</p>
+              <p className="mt-2 font-medium text-stone-900">
+                We couldn't read all of this wallet's deposits and withdrawals, so the Polymarket row is incomplete. Go by Polymarket's own number below.
+              </p>
             )}
 
             <div className="mt-6 overflow-x-auto">
@@ -326,14 +329,15 @@ export default function Home() {
                   <p className="mt-1">None of this wallet's bets have finished yet.</p>
                 ) : (
                   <p className="mt-1">
-                    From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that are finished (settled or sold): {poly.bets.losing.toLocaleString()} lost and {poly.bets.winning.toLocaleString()}{" "}
-                    won. The losing ones cost {usd(Math.abs(poly.bets.lostOnLosers))}, and the biggest single loss was {usd(Math.abs(poly.bets.biggestLoss))}.
+                    From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that are finished (settled or sold): {poly.bets.losing.toLocaleString()} lost and{" "}
+                    {poly.bets.winning.toLocaleString()} won. The losing ones cost {usd(Math.abs(poly.bets.lostOnLosers))}, and the biggest single loss was{" "}
+                    {usd(Math.abs(poly.bets.biggestLoss))}.
                     {poly.bets.truncated && " This wallet has too many bets to read in one go, so only the most recent ones are counted here."}
                   </p>
                 )}
                 {poly.money.officialAllTimePnl !== null && (
                   <p className="mt-2">
-                    Polymarket's own profit and loss on this wallet's finished bets: {usd(poly.money.officialAllTimePnl)}.
+                    Polymarket's own profit and loss for this wallet: {usd(poly.money.officialAllTimePnl)}.
                     {polyGap <= -5 &&
                       ` That's ${usd(-polyGap)} better than your Polymarket row above. Likely reasons: open bets that are down right now, cash in the account you haven't entered, or money moved in or out without a bet.`}
                     {polyGap >= 5 &&

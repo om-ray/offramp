@@ -15,8 +15,7 @@ const MESSAGES = {
 type Lookup = { body: unknown; status: number; complete: boolean };
 const cache = new Map<string, { at: number; ttl: number; result: Promise<Lookup> }>();
 
-async function lookup(wallet: string): Promise<Lookup> {
-  const deadline = Date.now() + BUDGET_MS;
+async function lookup(wallet: string, deadline: number): Promise<Lookup> {
   const [money, bets] = await Promise.all([polymarketMoney(wallet, deadline), polymarketBets(wallet, deadline)]);
   const empty = !money.deposited && !money.withdrawn && !money.openPositionValue && !money.officialAllTimePnl && !bets.positionCount;
   if (empty) {
@@ -31,18 +30,19 @@ async function lookup(wallet: string): Promise<Lookup> {
   return { status: 200, complete: whole, body: { wallet, money, bets: { winning, losing, lostOnLosers, biggestLoss, from, to, truncated: !complete } } };
 }
 
-function cachedLookup(wallet: string): Promise<Lookup> {
+function cachedLookup(wallet: string, deadline: number): Promise<Lookup> {
   const now = Date.now();
   for (const [key, entry] of cache) if (now - entry.at > entry.ttl) cache.delete(key);
   const hit = cache.get(wallet);
   if (hit) return hit.result;
-  const result = lookup(wallet);
+  const result = lookup(wallet, deadline);
   const entry = { at: now, ttl: CACHE_MS, result };
   cache.set(wallet, entry);
   result.then(
     (r) => {
-      if (r.status !== 200) cache.delete(wallet);
-      else if (!r.complete) entry.ttl = PARTIAL_CACHE_MS;
+      if (r.status !== 200) return cache.delete(wallet);
+      entry.at = Date.now();
+      if (!r.complete) entry.ttl = PARTIAL_CACHE_MS;
     },
     () => cache.delete(wallet),
   );
@@ -55,9 +55,10 @@ export async function GET(request: Request) {
   const input = new URL(request.url).searchParams.get("wallet")?.trim() ?? "";
   if (!input) return NextResponse.json({ error: "Paste a username or wallet address first." }, { status: 400 });
   if (!isLookupInput(input)) return NextResponse.json({ error: "That doesn't look like a Polymarket username or wallet address." }, { status: 400 });
+  const deadline = Date.now() + BUDGET_MS;
   try {
-    const wallet = await resolveWallet(input);
-    const { body, status } = await cachedLookup(wallet);
+    const wallet = await resolveWallet(input, Math.min(deadline, Date.now() + 15_000));
+    const { body, status } = await cachedLookup(wallet, deadline);
     return NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     const kind = err instanceof PolymarketError ? err.kind : "upstream";

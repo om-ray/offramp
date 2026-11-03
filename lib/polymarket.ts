@@ -59,11 +59,11 @@ async function walk<T>(path: string, params: Record<string, string>, deadline: n
   return { rows, complete: false };
 }
 
-export async function resolveWallet(input: string): Promise<string> {
+export async function resolveWallet(input: string, deadline = Date.now() + 15_000): Promise<string> {
   const query = input.trim().replace(/^@/, "");
   if (ADDRESS.test(query)) return query.toLowerCase();
   type Profile = { name?: string; pseudonym?: string; proxyWallet?: string };
-  const result = await getJson<{ profiles?: Profile[] }>(GAMMA, "/public-search", { q: query, search_profiles: "true", limit_per_type: "20" }, Date.now() + 30_000);
+  const result = await getJson<{ profiles?: Profile[] }>(GAMMA, "/public-search", { q: query, search_profiles: "true", limit_per_type: "20" }, deadline);
   const wallets = new Set(
     (result.profiles ?? [])
       .filter((p): p is Profile => !!p && typeof p === "object")

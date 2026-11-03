@@ -18,8 +18,15 @@ const worker = {
       if (value) headers.set(name, value);
     }
     headers.set("x-edge-auth", env.EDGE_SECRET);
-    const response = await fetch(upstream, { method: request.method, headers, redirect: "manual" });
-    if (!url.pathname.startsWith("/api/") || response.ok) return response;
+    const isApi = url.pathname.startsWith("/api/");
+    let response;
+    try {
+      response = await fetch(upstream, { method: request.method, headers, redirect: "manual" });
+    } catch (err) {
+      if (!isApi) throw err;
+      return Response.json({ error: "We couldn't read this wallet just now. Try again, or type your totals in by hand below." }, { status: 503 });
+    }
+    if (!isApi || response.ok) return response;
     const type = response.headers.get("content-type") ?? "";
     if (type.includes("application/json")) return new Response(response.body, { status: response.status, headers: { "content-type": type, "cache-control": "no-store" } });
     return Response.json({ error: "We couldn't read this wallet just now. Try again, or type your totals in by hand below." }, { status: response.status });
