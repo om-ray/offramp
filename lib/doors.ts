@@ -58,7 +58,7 @@ export const DOORS: Door[] = [
       "In the app, open Help and contact support. Send the message below.",
     ],
     link: { label: "Robinhood event contract opt-out", href: "https://robinhood.com/us/en/support/articles/opting-out-of-event-contracts/" },
-    message: supportMessage("event contract trading (prediction markets), not just sports markets", ""),
+    message: supportMessage("event contract trading (prediction markets), including sports markets", ""),
   },
   {
     id: "coinbase",

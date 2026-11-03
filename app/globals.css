@@ -1,24 +1,24 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f5f3ee;
-  --field: #fcfbf8;
+  --paper: #fafafa;
+  --field: #ffffff;
   --ink: #1d1e20;
-  --muted: #5c5a54;
-  --line: #dcd8ce;
-  --line-strong: #8c8980;
+  --muted: #55565b;
+  --line: #dedee2;
+  --line-strong: #84858b;
   --accent: #2d4f80;
   --accent-wash: #e4e8ef;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #151514;
-    --field: #1d1d1b;
-    --ink: #ebe9e3;
-    --muted: #a5a39b;
-    --line: #34332f;
-    --line-strong: #74726b;
+    --paper: #141416;
+    --field: #1c1c1f;
+    --ink: #ebebed;
+    --muted: #a4a5aa;
+    --line: #313136;
+    --line-strong: #77787e;
     --accent: #a9c1e8;
     --accent-wash: #1f2530;
   }
@@ -69,26 +69,6 @@ body {
   font-variant-numeric: lining-nums tabular-nums;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .arrive {
-    animation: arrive 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-  .arrive-late {
-    animation: arrive 700ms 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  }
-}
-
-@keyframes arrive {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 @media print {
   :root {
     --paper: #ffffff;
@@ -96,7 +76,7 @@ body {
     --ink: #111111;
     --muted: #444444;
     --line: #cccccc;
-    --line-strong: #8c8980;
+    --line-strong: #84858b;
     --accent: #2d4f80;
     --accent-wash: #e4e8ef;
   }

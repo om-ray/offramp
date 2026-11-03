@@ -4,7 +4,7 @@ Shows someone what prediction markets have cost them across Polymarket, Kalshi, 
 
 - polymarket.com wallets fill in from Polymarket's public Data API v2: deposits and withdrawals, open position value, Polymarket's own all-time PnL, and every finished bet (settled, sold or combo) from its positions.
 - Other platforms are typed in by hand. Nothing leaves the browser except the Polymarket lookup.
-- The user guesses their number before seeing it, and the helpline is on screen the whole time.
+- The user guesses their number before seeing it. The helpline is in a note under the result and in the footer.
 
 ```bash
 npm install

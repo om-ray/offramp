@@ -112,7 +112,7 @@ function Heading({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <h2 ref={focusRef} tabIndex={focusRef ? -1 : undefined} className="font-serif outline-none text-[1.75rem] leading-tight tracking-[-0.01em] sm:text-[2rem]">
+      <h2 ref={focusRef} tabIndex={focusRef ? -1 : undefined} className="font-serif outline-none text-[1.75rem] leading-tight sm:text-[2rem]">
         <span className="figure mr-3 text-muted" aria-hidden="true">
           {n}
         </span>
@@ -231,16 +231,16 @@ export default function Home() {
   const doorsDone = DOORS.filter((d) => done[d.id]).length;
   const used = new Set<string>([
     ...(poly ? ["polymarket"] : []),
-    ...PLATFORMS.filter((p) => filled(amounts[p.id])).flatMap((p) => PLATFORM_DOORS[p.id] ?? []),
+    ...PLATFORMS.filter((p) => filled(amounts[p.id])).flatMap((p) => PLATFORM_DOORS[p.id]),
   ]);
 
   return (
     <div className="min-h-[100dvh] bg-paper text-ink">
       <main className="mx-auto max-w-[40rem] px-4 pb-16 pt-8 sm:px-6 sm:pt-14">
         <header>
-          <p className="font-serif text-lg italic text-muted">Off Ramp</p>
-          <h1 className="mt-6 font-serif text-[2.25rem] leading-[1.08] tracking-[-0.015em] [font-variation-settings:'opsz'_60] sm:text-[3rem]">
-            See what prediction markets have really cost you. Then close every door.
+          <p className="text-lg font-semibold">Off Ramp</p>
+          <h1 className="mt-6 font-serif text-[2.25rem] leading-[1.1] [font-variation-settings:'opsz'_60] sm:text-[3rem]">
+            See what prediction markets have cost you. Then close every door.
           </h1>
           <p className="mt-5 max-w-[34rem] text-[1.0625rem] leading-relaxed text-muted">
             A sportsbook self-exclusion doesn&apos;t cover Kalshi, Polymarket, or the event contracts inside Robinhood, Coinbase and Webull. This puts your real number in one
@@ -248,7 +248,7 @@ export default function Home() {
           </p>
         </header>
 
-        <section className="mt-12 border-t border-line pt-10 print:hidden">
+        <section className="mt-16 print:hidden">
           <Heading n={1}>Before you look, guess</Heading>
           <p id="guess-hint" className="mt-3 leading-relaxed text-muted">
             Roughly how much do you think you&apos;re down, across everything?
@@ -261,7 +261,7 @@ export default function Home() {
               aria-label="Your guess"
               aria-describedby="guess-hint"
               inputMode="decimal"
-              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink focus-visible:outline-none placeholder:text-line-strong placeholder:italic"
+              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink focus-visible:outline-none placeholder:text-line-strong"
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
               placeholder="your guess"
@@ -270,7 +270,7 @@ export default function Home() {
           <p className="mt-3 text-sm text-muted">Your numbers stay in this browser.</p>
         </section>
 
-        <section className="mt-14 border-t border-line pt-10 print:hidden">
+        <section className="mt-20 print:hidden">
           <Heading n={2}>Add your accounts</Heading>
 
           <div className="mt-7">
@@ -293,16 +293,13 @@ export default function Home() {
               </button>
             </div>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              It goes through our server to Polymarket&apos;s public data and isn&apos;t stored. Polymarket US app? Add it in the list below.
+              It goes through our server to Polymarket&apos;s public data and isn&apos;t stored. Add the Polymarket US app in the list below.
             </p>
             <div aria-live="polite">
               {polyState === "loading" && <p className="mt-3 text-sm text-muted">Busy wallets can take a couple of minutes.</p>}
               {polyState === "error" && <p className="mt-3 text-sm font-medium text-accent">{polyError}</p>}
               {poly && (
                 <p className="mt-3 text-sm font-medium text-ink">
-                  <span aria-hidden="true" className="mr-1.5 text-accent">
-                    ✓
-                  </span>
                   Loaded {poly.wallet.slice(0, 6)}…{poly.wallet.slice(-4)}.
                 </p>
               )}
@@ -318,19 +315,19 @@ export default function Home() {
           <div className="mt-10">
             <h3 className="text-lg font-semibold">Everything else</h3>
             <p className="mt-2 leading-relaxed text-muted">Tap each app you&apos;ve used and enter its totals. Skip the ones you never used.</p>
-            <ul className="mt-4 border-t border-line">
+            <ul className="mt-4">
               {PLATFORMS.map((p) => {
                 const a = amounts[p.id] ?? EMPTY;
                 const isOpen = !!open[p.id];
                 const row = rows.find((r) => r.name === p.name);
                 return (
-                  <li key={p.id} className="border-b border-line">
+                  <li key={p.id}>
                     <button
                       type="button"
                       aria-expanded={isOpen}
                       aria-controls={`acct-${p.id}`}
                       onClick={() => setOpen((o) => ({ ...o, [p.id]: !o[p.id] }))}
-                      className="-mx-2 flex min-h-14 w-[calc(100%+1rem)] items-center justify-between gap-4 rounded-[4px] px-2 py-3 text-left hover:bg-accent-wash/60"
+                      className="-mx-2 flex min-h-14 w-[calc(100%+1rem)] items-center justify-between gap-4 rounded-[4px] px-2 py-3 text-left hover:bg-accent-wash"
                     >
                       <span className="font-medium">{p.name}</span>
                       <span className="flex shrink-0 items-center gap-3 text-[0.9375rem] tabular-nums text-ink">
@@ -374,25 +371,25 @@ export default function Home() {
         </section>
 
         {revealed && (
-          <section ref={resultRef} className="mt-14 scroll-mt-6 border-t border-line pt-10">
+          <section ref={resultRef} className="mt-20 scroll-mt-6">
             <Heading n={3} focusRef={resultHeading}>
               Your real number
             </Heading>
-            <p className={`figure arrive mt-6 whitespace-nowrap leading-[0.95] tracking-[-0.02em] ${bigSize(usd(total))}`}>{usd(total)}</p>
-            <div className="arrive-late">
+            <p className={`figure mt-6 whitespace-nowrap leading-[0.95] ${bigSize(usd(total))}`}>{usd(total)}</p>
+            <div>
               <p className="mt-6 font-serif text-[1.3125rem] leading-snug">
                 {shown < 0 && `That's how much less you have than you put in. You put in ${usd(put)} in total.`}
                 {shown === 0 && `You've got back about what you put in, ${usd(put)}.`}
-                {shown > 0 && `You have this much more than you put in. That can go back in fast. Being up doesn't make it safe, and closing the doors still matters.`}
+                {shown > 0 && `You have this much more than you put in. Being up doesn't make it safe, and it can go back in fast. Close the doors anyway.`}
               </p>
               {guessed > 0 && shown < 0 && (
-                <div className="mt-6 flex items-baseline justify-between gap-4 border-t border-line pt-3 text-muted">
+                <div className="mt-4 flex items-baseline justify-between gap-4 text-muted">
                   <span>Your guess</span>
                   <span className="figure text-xl">{usd(-guessed)}</span>
                 </div>
               )}
 
-              <p className="mt-8 border-l-2 border-accent pl-4 leading-relaxed print:hidden">
+              <p className="mt-8 leading-relaxed print:hidden">
                 A number like this is a lot to look at. If it&apos;s hard, call or text{" "}
                 <a className={`${link} whitespace-nowrap relative after:absolute after:-inset-x-1 after:-inset-y-3 after:content-['']`} href={HELPLINE.tel}>
                   {HELPLINE.label}
@@ -401,7 +398,7 @@ export default function Home() {
                 <a className={`${link} font-semibold relative after:absolute after:-inset-x-1 after:-inset-y-3 after:content-['']`} href={CRISIS.tel}>
                   {CRISIS.label}
                 </a>
-                . Then do the next step. It&apos;s what changes things.
+                . Then do the next step.
               </p>
               <a className={`${link} mt-3 inline-flex min-h-11 items-center print:hidden`} href="#doors">
                 Next: close the doors you&apos;ve used
@@ -491,7 +488,7 @@ export default function Home() {
           </section>
         )}
 
-        <section id="doors" className="mt-14 scroll-mt-6 border-t border-line pt-10">
+        <section id="doors" className="mt-20 scroll-mt-6">
           <Heading
             n={revealed ? 4 : 3}
             aside={
@@ -503,11 +500,11 @@ export default function Home() {
             Close every door
           </Heading>
           <p className="mt-3 leading-relaxed text-muted">Do the ones you&apos;ve used, plus the shared list and a device blocker. Tick each one off when it&apos;s done.</p>
-          <ol className="mt-6 border-t border-line">
+          <ol className="mt-8 space-y-8">
             {DOORS.map((d) => {
               const isOpen = expanded[d.id] ?? (!done[d.id] && (SHARED_DOORS.has(d.id) || used.has(d.id)));
               return (
-                <li key={d.id} className="border-b border-line py-5 [break-inside:avoid]">
+                <li key={d.id} className="[break-inside:avoid]">
                   <div className="flex items-start gap-1">
                     <label className="-ml-3 flex size-11 shrink-0 cursor-pointer items-center justify-center">
                       <input
@@ -585,7 +582,7 @@ export default function Home() {
           </ol>
         </section>
 
-        <section className="mt-14 border-t border-line pt-10 print:hidden">
+        <section className="mt-20 print:hidden">
           <Heading n={revealed ? 5 : 4}>Bring it to someone</Heading>
           <p className="mt-3 leading-relaxed text-muted">Print this page for a counselor or someone you trust. It shows your number and which doors are closed.</p>
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -598,7 +595,7 @@ export default function Home() {
           </div>
         </section>
 
-        <footer className="mt-16 border-t border-line pt-6 text-sm leading-relaxed text-muted">
+        <footer className="mt-20 text-sm leading-relaxed text-muted">
           Talk to someone, free, 24/7:{" "}
           <a className={link} href={HELPLINE.tel}>
             <span className="whitespace-nowrap">{HELPLINE.label}</span> <span className="whitespace-nowrap">({HELPLINE.number})</span>

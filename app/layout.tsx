@@ -5,7 +5,6 @@ import "./globals.css";
 const serif = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
-  style: ["normal", "italic"],
   axes: ["opsz"],
 });
 
@@ -16,13 +15,13 @@ const sans = Public_Sans({
 
 export const metadata: Metadata = {
   title: "Off Ramp",
-  description: "See what prediction markets have really cost you, then close every door.",
+  description: "See what prediction markets have cost you, then close every door.",
 };
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f5f3ee" },
-    { media: "(prefers-color-scheme: dark)", color: "#151514" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#141416" },
   ],
 };
 
