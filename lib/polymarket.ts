@@ -2,6 +2,11 @@ const DATA = "https://data-api.polymarket.com";
 const GAMMA = "https://gamma-api.polymarket.com";
 const ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 const PAGE = "1000";
+const LOOKUP_INPUT = /^@?[^\p{Cc}\p{Cf}]{1,64}$/u;
+
+export function isLookupInput(input: string): boolean {
+  return LOOKUP_INPUT.test(input.trim());
+}
 
 type Page<T> = { data: T[]; pagination?: { has_more?: boolean; next_cursor?: string | null } };
 
@@ -21,7 +26,7 @@ async function getJson<T>(base: string, path: string, params: Record<string, str
   for (let attempt = 0; ; attempt++) {
     const left = deadline - Date.now();
     if (left <= 0) throw new PolymarketError("Ran out of time reading Polymarket.", "upstream");
-    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(Math.min(60_000, left)) });
+    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(Math.min(30_000, left)) });
     if (res.status === 429) {
       const wait = Math.min(Number(res.headers.get("retry-after")) || 2 ** attempt, 10) * 1000;
       if (attempt >= 3 || Date.now() + wait >= deadline) throw new PolymarketError("Polymarket is busy right now.", "busy");
@@ -61,6 +66,7 @@ export async function resolveWallet(input: string): Promise<string> {
   const result = await getJson<{ profiles?: Profile[] }>(GAMMA, "/public-search", { q: query, search_profiles: "true", limit_per_type: "20" }, Date.now() + 30_000);
   const wallets = new Set(
     (result.profiles ?? [])
+      .filter((p): p is Profile => !!p && typeof p === "object")
       .filter((p) => [p.name, p.pseudonym].some((n) => n?.toLowerCase() === query.toLowerCase()))
       .map((p) => p.proxyWallet?.toLowerCase())
       .filter((w): w is string => !!w && ADDRESS.test(w)),
@@ -126,9 +132,9 @@ export function summarizeBets(bets: FinishedBet[]) {
     winning: pnls.filter((p) => p >= 0.01).length,
     losing: pnls.filter((p) => p <= -0.01).length,
     lostOnLosers: pnls.reduce((n, p) => n + Math.min(0, p), 0),
-    biggestLoss: Math.min(0, ...pnls),
-    from: starts.length ? new Date(Math.min(...starts) * 1000).toISOString() : null,
-    to: ends.length ? new Date(Math.max(...ends) * 1000).toISOString() : null,
+    biggestLoss: pnls.reduce((m, p) => Math.min(m, p), 0),
+    from: starts.length ? new Date(starts.reduce((m, t) => Math.min(m, t)) * 1000).toISOString() : null,
+    to: ends.length ? new Date(ends.reduce((m, t) => Math.max(m, t)) * 1000).toISOString() : null,
   };
 }
 

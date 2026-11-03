@@ -287,7 +287,7 @@ export default function Home() {
             </p>
             {poly && poly.money.officialAllTimePnl !== null && poly.money.officialAllTimePnl < 0 && polyGap >= 5 && (
               <p className="mt-2 font-medium text-stone-900">
-                Polymarket's own number for this wallet is a bigger loss, {usd(poly.money.officialAllTimePnl)}. Go by that one for Polymarket.
+                Polymarket says your finished bets alone lost {usd(poly.money.officialAllTimePnl)}, more than the Polymarket row shows. See below for why they differ.
               </p>
             )}
             {poly && !poly.money.cashFlowComplete && (

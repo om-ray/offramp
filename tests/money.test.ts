@@ -1,7 +1,7 @@
 import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { parseAmount, tally, usd } from "../lib/money.ts";
-import { finishedBets, polymarketBets, polymarketMoney, summarizeBets } from "../lib/polymarket.ts";
+import { finishedBets, isLookupInput, polymarketBets, polymarketMoney, resolveWallet, summarizeBets } from "../lib/polymarket.ts";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -92,4 +92,15 @@ test("finished bets include held losers, sold bets and settled combos, not live 
     from: new Date(1_789_000_000_000).toISOString(),
     to: new Date(1_792_000_000_000).toISOString(),
   });
+});
+
+test("username lookup finds real names with accents or spaces and skips empty search rows", async () => {
+  globalThis.fetch = (async () =>
+    Response.json({
+      profiles: [null, { name: "Joséph", proxyWallet: "0xaffffa5ea6f94e08bae2898bc0567d214af3493b" }, { name: "John XYZ", proxyWallet: "0x751a2b86cab503496efd325c8344e10159349ea1" }],
+    })) as unknown as typeof fetch;
+  assert.equal(await resolveWallet("Joséph"), "0xaffffa5ea6f94e08bae2898bc0567d214af3493b");
+  assert.equal(await resolveWallet("@john xyz"), "0x751a2b86cab503496efd325c8344e10159349ea1");
+  assert.ok(isLookupInput("Joséph") && isLookupInput("John XYZ"));
+  assert.ok(!isLookupInput("x".repeat(65)) && !isLookupInput("a\u0000b"));
 });

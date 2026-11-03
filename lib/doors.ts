@@ -77,7 +77,7 @@ export const DOORS: Door[] = [
     what: "Webull has an opt-out in the app. It can't be reversed for the time you pick.",
     steps: [
       "Account, then your Event Contract account, then the menu at the top right, then Voluntary Opt-Out. Pick the longest time.",
-      "For a permanent block, also email support@webull.com with the message below, or call +1 888-828-0618 on a weekday during business hours.",
+      "To ask for a longer block, email futures@webull.com (Webull's event contract team) with the message below, or call 888-816-0040, Monday to Friday, 8am to 5pm ET.",
     ],
     link: { label: "Webull event contract opt-out", href: "https://www.webull.com/help/faq/11176-Event-Contract-Eligibility-Restrictions-and-Opt-Out" },
     message: supportMessage("event contracts and prediction markets", ""),
@@ -93,7 +93,10 @@ export const DOORS: Door[] = [
     id: "draftkings",
     name: "DraftKings Predictions",
     what: "DraftKings self-exclusion also blocks Predictions (event contracts).",
-    steps: ["Use Responsible Gaming in your DraftKings account and self-exclude for the longest term. If you get stuck, send support the message below."],
+    steps: [
+      "Sell any open Predictions positions first. Once you self-exclude, you can't sell them.",
+      "Use Responsible Gaming in your DraftKings account and self-exclude for the longest term. If you get stuck, send support the message below.",
+    ],
     link: { label: "DraftKings self-exclusion", href: "https://rg.draftkings.com/breaks/self-exclusion" },
     message: supportMessage("DraftKings products, including DraftKings Predictions", ""),
   },
