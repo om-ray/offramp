@@ -394,11 +394,11 @@ export default function Home() {
 
               <p className="mt-8 border-l-2 border-accent pl-4 leading-relaxed print:hidden">
                 A number like this is a lot to look at. If it&apos;s hard, call or text{" "}
-                <a className={`${link} whitespace-nowrap`} href={HELPLINE.tel}>
+                <a className={`${link} whitespace-nowrap relative after:absolute after:-inset-x-1 after:-inset-y-3 after:content-['']`} href={HELPLINE.tel}>
                   {HELPLINE.label}
                 </a>{" "}
                 <span className="whitespace-nowrap">({HELPLINE.number})</span> now. If you&apos;re thinking about hurting yourself, call or text{" "}
-                <a className={`${link} font-semibold`} href={CRISIS.tel}>
+                <a className={`${link} font-semibold relative after:absolute after:-inset-x-1 after:-inset-y-3 after:content-['']`} href={CRISIS.tel}>
                   {CRISIS.label}
                 </a>
                 . Then do the next step. It&apos;s what changes things.
@@ -427,18 +427,18 @@ export default function Home() {
                       <span className="font-medium">{r.name}</span>
                       <span className="figure shrink-0 text-xl">{usd(r.net)}</span>
                     </div>
-                    <dl className="mt-1 flex flex-wrap gap-x-5 gap-y-0.5 text-sm tabular-nums text-muted">
-                      <div className="flex gap-1.5 whitespace-nowrap">
+                    <dl className="mt-1 grid grid-cols-3 gap-x-3 text-sm tabular-nums text-muted">
+                      <div className="min-w-0">
                         <dt>Put in</dt>
-                        <dd className="text-ink">{usd(r.deposited)}</dd>
+                        <dd className="truncate text-ink">{usd(r.deposited)}</dd>
                       </div>
-                      <div className="flex gap-1.5 whitespace-nowrap">
+                      <div className="min-w-0">
                         <dt>Took out</dt>
-                        <dd className="text-ink">{usd(r.withdrawn)}</dd>
+                        <dd className="truncate text-ink">{usd(r.withdrawn)}</dd>
                       </div>
-                      <div className="flex gap-1.5 whitespace-nowrap">
+                      <div className="min-w-0">
                         <dt>Still in it</dt>
-                        <dd className="text-ink">{usd(r.left)}</dd>
+                        <dd className="truncate text-ink">{usd(r.left)}</dd>
                       </div>
                     </dl>
                   </li>
