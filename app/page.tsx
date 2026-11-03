@@ -27,6 +27,12 @@ const PLATFORMS: { id: string; name: string; where: string }[] = [
   { id: "other", name: "Anything else", where: "DraftKings, FanDuel, Crypto.com, Novig, PrizePicks, sportsbooks" },
 ];
 
+const FIELDS = [
+  { key: "deposited", label: "Put in" },
+  { key: "withdrawn", label: "Took out" },
+  { key: "balance", label: "Still in it" },
+] as const;
+
 const STORE = "offramp:v1";
 const KEYS = ["guess", "amounts", "done"];
 const EMPTY: Amounts = { deposited: "", withdrawn: "", balance: "" };
@@ -56,9 +62,36 @@ function date(iso: string | null) {
   return iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "unknown";
 }
 
+function filled(a: Amounts | undefined) {
+  return !!a && !!(a.deposited || a.withdrawn || a.balance);
+}
+
+const field =
+  "h-12 w-full min-w-0 rounded-[4px] border border-line-strong bg-field px-3 text-base text-ink tabular-nums placeholder:text-muted focus-visible:border-accent";
+const primary =
+  "inline-flex min-h-12 items-center justify-center rounded-[4px] bg-ink px-5 font-medium text-paper transition-[transform,opacity] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40";
+const quiet =
+  "inline-flex min-h-11 items-center rounded-[4px] border border-line-strong px-4 font-medium text-ink transition-colors hover:border-ink active:translate-y-px";
+const link = "text-accent underline decoration-1 underline-offset-[3px] hover:decoration-2";
+
+function Heading({ n, children, aside }: { n: number; children: React.ReactNode; aside?: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <h2 className="font-serif text-[1.75rem] leading-tight tracking-[-0.01em] sm:text-[2rem]">
+        <span className="figure mr-3 text-muted" aria-hidden="true">
+          {n}
+        </span>
+        {children}
+      </h2>
+      {aside}
+    </div>
+  );
+}
+
 export default function Home() {
   const [guess, setGuess] = useState("");
   const [amounts, setAmounts] = useState<Record<string, Amounts>>({});
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   const [polyCash, setPolyCash] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [walletInput, setWalletInput] = useState("");
@@ -70,8 +103,10 @@ export default function Home() {
   const [copied, setCopied] = useState("");
 
   useEffect(() => {
+    const saved = load<Record<string, Amounts>>("amounts", {});
     setGuess(load("guess", ""));
-    setAmounts(load("amounts", {}));
+    setAmounts(saved);
+    setOpen(Object.fromEntries(PLATFORMS.filter((p) => filled(saved[p.id])).map((p) => [p.id, true])));
     setDone(load("done", {}));
     setHydrated(true);
   }, []);
@@ -106,7 +141,9 @@ export default function Home() {
   const resultRef = useRef<HTMLElement>(null);
   const lookup = useRef(0);
   useEffect(() => {
-    if (revealed) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!revealed) return;
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    resultRef.current?.scrollIntoView({ behavior: still ? "auto" : "smooth", block: "start" });
   }, [revealed]);
 
   async function checkPolymarket() {
@@ -142,6 +179,7 @@ export default function Home() {
     clearSaved();
     setGuess("");
     setAmounts({});
+    setOpen({});
     setPolyCash("");
     setDone({});
     setPoly(null);
@@ -154,271 +192,349 @@ export default function Home() {
   const doorsDone = DOORS.filter((d) => done[d.id]).length;
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900">
-      <div className="sticky top-0 z-10 border-b border-teal-900/10 bg-teal-50 px-4 py-2 text-sm text-teal-950 print:static">
-        <div className="mx-auto flex max-w-3xl flex-wrap items-center gap-x-3 gap-y-1">
-          <span>Talk to someone now, free, 24/7:</span>
-          <a className="font-semibold underline" href={HELPLINE.tel}>
-            {HELPLINE.label} ({HELPLINE.number})
-          </a>
-          <a className="underline" href={HELPLINE.sms}>
-            text (phone)
-          </a>
-          <a className="underline" href={HELPLINE.chat} target="_blank" rel="noreferrer">
-            chat
-          </a>
-        </div>
-      </div>
-
-      <main className="mx-auto max-w-3xl px-4 pb-24 pt-10">
-        <header className="mb-10">
-          <p className="text-sm font-medium uppercase tracking-wide text-stone-500">Off Ramp</p>
-          <h1 className="mt-2 text-3xl font-semibold leading-tight sm:text-4xl">See what prediction markets have really cost you. Then close every door.</h1>
-          <p className="mt-4 text-stone-600">
-            Kalshi, Polymarket and the event contracts inside Robinhood, Coinbase and Webull aren't covered by a sportsbook self-exclusion. This puts your real number in one place
-            and walks you through shutting each one. Your numbers stay in this browser. A Polymarket username goes through our server to Polymarket's public data and isn't stored.
+    <div className="min-h-[100dvh] bg-paper text-ink">
+      <main className="mx-auto max-w-[40rem] px-4 pb-16 pt-8 sm:px-6 sm:pt-14">
+        <header>
+          <p className="font-serif text-lg italic text-muted">Off Ramp</p>
+          <h1 className="mt-6 font-serif text-[2.25rem] leading-[1.08] tracking-[-0.015em] [font-variation-settings:'opsz'_60] sm:text-[3rem]">
+            See what prediction markets have really cost you. Then close every door.
+          </h1>
+          <p className="mt-5 max-w-[34rem] text-[1.0625rem] leading-relaxed text-muted">
+            A sportsbook self-exclusion doesn&apos;t cover Kalshi, Polymarket, or the event contracts inside Robinhood, Coinbase and Webull. This puts your real number in one
+            place and walks you through shutting each one.
+          </p>
+          <p className="mt-4 text-[0.9375rem] leading-relaxed text-muted print:hidden">
+            Want to talk to someone first?{" "}
+            <a className={`${link} whitespace-nowrap`} href={HELPLINE.tel}>
+              Call {HELPLINE.label}
+            </a>
+            ,{" "}
+            <a className={link} href={HELPLINE.sms}>
+              text
+            </a>{" "}
+            or{" "}
+            <a className={link} href={HELPLINE.chat} target="_blank" rel="noreferrer">
+              chat
+            </a>
+            . Free, any hour.
           </p>
         </header>
 
-        <section className="mb-10 rounded-2xl border border-stone-200 bg-white p-6 print:hidden">
-          <h2 className="text-lg font-semibold">1. Before you look, guess</h2>
-          <p className="mt-1 text-sm text-stone-600">Roughly how much do you think you're down, across everything?</p>
-          <label className="mt-4 flex max-w-xs items-center rounded-lg border border-stone-300 px-3 py-2 focus-within:border-teal-700">
-            <span className="text-stone-500">$</span>
+        <section className="mt-12 border-t border-line pt-10 print:hidden">
+          <Heading n={1}>Before you look, guess</Heading>
+          <p className="mt-3 leading-relaxed text-muted">Roughly how much do you think you&apos;re down, across everything?</p>
+          <label className="mt-5 flex max-w-[16rem] items-baseline gap-2 border-b-2 border-line-strong pb-1 focus-within:border-accent">
+            <span className="figure text-[2.5rem] leading-none text-muted" aria-hidden="true">
+              $
+            </span>
             <input
               aria-label="Your guess"
               inputMode="decimal"
-              className="ml-1 w-full bg-transparent outline-none"
+              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink outline-none placeholder:text-muted"
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
               placeholder="0"
             />
           </label>
+          <p className="mt-3 text-sm text-muted">Your numbers stay in this browser.</p>
         </section>
 
-        <section className="mb-10 rounded-2xl border border-stone-200 bg-white p-6 print:hidden">
-          <h2 className="text-lg font-semibold">2. Add your accounts</h2>
+        <section className="mt-14 border-t border-line pt-10 print:hidden">
+          <Heading n={2}>Add your accounts</Heading>
 
-          <div className="mt-5">
-            <h3 className="font-medium">Polymarket (polymarket.com)</h3>
-            <p className="mt-1 text-sm text-stone-600">
-              Paste your polymarket.com username or wallet address. Deposits, withdrawals and your bets are public, so this fills itself in. If you use the Polymarket US app, type
-              it in below instead.
+          <div className="mt-7">
+            <h3 className="text-lg font-semibold">Polymarket (polymarket.com)</h3>
+            <p className="mt-2 leading-relaxed text-muted">
+              Paste your polymarket.com username or wallet address. Deposits, withdrawals and bets are public, so this fills itself in. It goes through our server to
+              Polymarket&apos;s public data and isn&apos;t stored. Use the Polymarket US app? Add it in the list below instead.
             </p>
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <div className="mt-4 flex gap-2">
               <input
                 aria-label="Polymarket username or wallet"
-                className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 outline-none focus:border-teal-700"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                className={`${field} flex-1`}
                 value={walletInput}
                 onChange={(e) => setWalletInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && checkPolymarket()}
                 placeholder="username or 0x…"
               />
-              <button className="rounded-lg bg-teal-800 px-4 py-2 font-medium text-white disabled:opacity-60" onClick={checkPolymarket} disabled={polyState === "loading"}>
+              <button className={`${primary} shrink-0`} onClick={checkPolymarket} disabled={polyState === "loading"}>
                 {polyState === "loading" ? "Reading every bet…" : "Load"}
               </button>
             </div>
-            {polyState === "loading" && <p className="mt-2 text-sm text-stone-500">Busy wallets can take a couple of minutes.</p>}
-            {polyState === "error" && <p className="mt-2 text-sm text-red-700">{polyError}</p>}
-            {poly && (
-              <>
-                <p className="mt-2 text-sm text-teal-800">
+            <div aria-live="polite">
+              {polyState === "loading" && <p className="mt-3 text-sm text-muted">Busy wallets can take a couple of minutes.</p>}
+              {polyState === "error" && <p className="mt-3 text-sm font-medium text-accent">{polyError}</p>}
+              {poly && (
+                <p className="mt-3 text-sm text-muted">
                   Loaded {poly.wallet.slice(0, 6)}…{poly.wallet.slice(-4)}.
                 </p>
-                <label className="mt-3 block max-w-xs text-sm">
-                  <span className="text-stone-600">Cash in your Polymarket account (not your portfolio total)</span>
-                  <input
-                    inputMode="decimal"
-                    className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 outline-none focus:border-teal-700"
-                    value={polyCash}
-                    onChange={(e) => setPolyCash(e.target.value)}
-                    placeholder="$0"
-                  />
-                </label>
-              </>
+              )}
+            </div>
+            {poly && (
+              <label className="mt-4 block max-w-[20rem]">
+                <span className="block text-sm text-muted">Cash in your Polymarket account (not your portfolio total)</span>
+                <input inputMode="decimal" className={`${field} mt-2`} value={polyCash} onChange={(e) => setPolyCash(e.target.value)} placeholder="$0" />
+              </label>
             )}
           </div>
 
-          <div className="mt-8">
-            <h3 className="font-medium">Everything else</h3>
-            <p className="mt-1 text-sm text-stone-600">Enter totals from each app. Leave a row empty if you never used it.</p>
-            <div className="mt-3 space-y-4">
-              {PLATFORMS.map((p) => (
-                <fieldset key={p.id} className="rounded-xl border border-stone-200 p-4">
-                  <legend className="px-1 text-sm font-medium">{p.name}</legend>
-                  <p className="mb-3 text-xs text-stone-500">{p.where}</p>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {(["deposited", "withdrawn", "balance"] as const).map((field) => (
-                      <label key={field} className="text-sm">
-                        <span className="text-stone-600">{field === "deposited" ? "Put in" : field === "withdrawn" ? "Took out" : "Still in it"}</span>
-                        <input
-                          inputMode="decimal"
-                          className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 outline-none focus:border-teal-700"
-                          value={(amounts[p.id] ?? EMPTY)[field]}
-                          onChange={(e) => setAmounts((all) => ({ ...all, [p.id]: { ...(all[p.id] ?? EMPTY), [field]: e.target.value } }))}
-                          placeholder="$0"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-              ))}
-            </div>
+          <div className="mt-10">
+            <h3 className="text-lg font-semibold">Everything else</h3>
+            <p className="mt-2 leading-relaxed text-muted">Tap each app you&apos;ve used and enter its totals. Skip the ones you never used.</p>
+            <ul className="mt-4 border-t border-line">
+              {PLATFORMS.map((p) => {
+                const a = amounts[p.id] ?? EMPTY;
+                const isOpen = !!open[p.id];
+                const row = rows.find((r) => r.name === p.name);
+                return (
+                  <li key={p.id} className="border-b border-line">
+                    <button
+                      type="button"
+                      aria-expanded={isOpen}
+                      aria-controls={`acct-${p.id}`}
+                      onClick={() => setOpen((o) => ({ ...o, [p.id]: !o[p.id] }))}
+                      className="flex min-h-14 w-full items-center justify-between gap-4 py-3 text-left"
+                    >
+                      <span className="font-medium">{p.name}</span>
+                      <span className="shrink-0 text-sm tabular-nums text-muted">
+                        {row ? `Net ${usd(row.net)}` : isOpen ? "Close" : "Add"}
+                        <span aria-hidden="true" className={`ml-2 inline-block transition-transform ${isOpen ? "rotate-45" : ""}`}>
+                          +
+                        </span>
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div id={`acct-${p.id}`} className="pb-5">
+                        <p className="text-sm text-muted">Where to find it: {p.where}</p>
+                        <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-3">
+                          {FIELDS.map((f) => (
+                            <label key={f.key} className="min-w-0">
+                              <span className="block text-sm text-muted">{f.label}</span>
+                              <input
+                                inputMode="decimal"
+                                aria-label={`${p.name}: ${f.label}`}
+                                className={`${field} mt-1 px-2.5`}
+                                value={a[f.key]}
+                                onChange={(e) => setAmounts((all) => ({ ...all, [p.id]: { ...(all[p.id] ?? EMPTY), [f.key]: e.target.value } }))}
+                                placeholder="$0"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
-          <button
-            className="mt-8 w-full rounded-lg bg-stone-900 px-4 py-3 font-medium text-white disabled:opacity-40"
-            disabled={rows.length === 0}
-            onClick={() => setRevealed(true)}
-          >
+          <button className={`${primary} mt-10 w-full text-[1.0625rem]`} disabled={rows.length === 0} onClick={() => setRevealed(true)}>
             Show my real number
           </button>
+          {rows.length === 0 && <p className="mt-3 text-center text-sm text-muted">Load Polymarket or add an account first.</p>}
         </section>
 
         {revealed && (
-          <section ref={resultRef} className="mb-10 scroll-mt-24 rounded-2xl border border-stone-200 bg-white p-6 print:border-0 print:p-0">
-            <h2 className="text-lg font-semibold">3. Your real number</h2>
-            <p className="mt-4 text-5xl font-semibold tabular-nums">{usd(total)}</p>
-            <p className="mt-2 text-stone-600">
-              {shown < 0 && `That's how much less you have than you put in. You put in ${usd(put)} in total.`}
-              {shown === 0 && `You've got back about what you put in, ${usd(put)}.`}
-              {shown > 0 && `You have this much more than you put in. That can go back in fast. Being up doesn't make it safe, and closing the doors still matters.`}
-              {guessed > 0 && shown < 0 && ` You guessed ${usd(-guessed)}.`}
-            </p>
-            {poly && poly.money.officialAllTimePnl !== null && poly.money.officialAllTimePnl < 0 && polyGap >= 5 && (
-              <p className="mt-2 font-medium text-stone-900">
-                Polymarket's own profit and loss for this wallet is {usd(poly.money.officialAllTimePnl)}, worse than the Polymarket row shows. See below for why they can
-                differ.
+          <section ref={resultRef} className="mt-14 scroll-mt-6 border-t border-line pt-10">
+            <Heading n={3}>Your real number</Heading>
+            <p className="figure arrive mt-6 break-words text-[clamp(3.5rem,17vw,6.75rem)] leading-[0.95] tracking-[-0.02em]">{usd(total)}</p>
+            <div className="arrive-late">
+              <p className="mt-6 font-serif text-[1.3125rem] leading-snug">
+                {shown < 0 && `That's how much less you have than you put in. You put in ${usd(put)} in total.`}
+                {shown === 0 && `You've got back about what you put in, ${usd(put)}.`}
+                {shown > 0 && `You have this much more than you put in. That can go back in fast. Being up doesn't make it safe, and closing the doors still matters.`}
               </p>
-            )}
-            {poly && !poly.money.cashFlowComplete && (
-              <p className="mt-2 font-medium text-stone-900">
-                We couldn't read all of this wallet's deposits and withdrawals, so the Polymarket row is incomplete. Go by Polymarket's own number below.
+              {guessed > 0 && shown < 0 && <p className="mt-2 font-serif text-[1.3125rem] italic leading-snug text-muted">You guessed {usd(-guessed)}.</p>}
+
+              <p className="mt-8 border-l-2 border-accent pl-4 leading-relaxed print:hidden">
+                A number like this is a lot to look at. If it&apos;s hard, call or text{" "}
+                <a className={`${link} whitespace-nowrap`} href={HELPLINE.tel}>
+                  {HELPLINE.label}
+                </a>{" "}
+                <span className="whitespace-nowrap">({HELPLINE.number})</span> now. If you&apos;re thinking about hurting yourself, call or text{" "}
+                <a className={`${link} font-semibold`} href={CRISIS.tel}>
+                  {CRISIS.label}
+                </a>
+                . Then do the next step. It&apos;s what changes things.
               </p>
-            )}
 
-            <div className="mt-6 overflow-x-auto">
-              <table className="w-full text-left text-sm tabular-nums">
-                <thead className="text-stone-500">
-                  <tr>
-                    <th className="py-2 font-normal">Account</th>
-                    <th className="py-2 text-right font-normal">Put in</th>
-                    <th className="py-2 text-right font-normal">Took out</th>
-                    <th className="py-2 text-right font-normal">Still in it</th>
-                    <th className="py-2 text-right font-normal">Net</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.name} className="border-t border-stone-100">
-                      <td className="py-2">{r.name}</td>
-                      <td className="py-2 text-right">{usd(r.deposited)}</td>
-                      <td className="py-2 text-right">{usd(r.withdrawn)}</td>
-                      <td className="py-2 text-right">{usd(r.left)}</td>
-                      <td className="py-2 text-right font-medium">{usd(r.net)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              {poly && poly.money.officialAllTimePnl !== null && poly.money.officialAllTimePnl < 0 && polyGap >= 5 && (
+                <p className="mt-6 font-medium leading-relaxed">
+                  Polymarket&apos;s own profit and loss for this wallet is {usd(poly.money.officialAllTimePnl)}, worse than the Polymarket row shows. See below for why they can
+                  differ.
+                </p>
+              )}
+              {poly && !poly.money.cashFlowComplete && (
+                <p className="mt-4 font-medium leading-relaxed">
+                  We couldn&apos;t read all of this wallet&apos;s deposits and withdrawals, so the Polymarket row is incomplete. Go by Polymarket&apos;s own number below.
+                </p>
+              )}
 
-            {poly && (
-              <div className="mt-6 rounded-xl bg-stone-50 p-4 text-sm text-stone-700">
-                <p className="font-medium text-stone-900">Polymarket, bet by bet</p>
-                {poly.bets.winning + poly.bets.losing === 0 ? (
-                  <p className="mt-1">None of this wallet's bets have finished yet.</p>
-                ) : (
-                  <p className="mt-1">
-                    From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that are finished (settled or sold): {poly.bets.losing.toLocaleString()} lost and{" "}
-                    {poly.bets.winning.toLocaleString()} won. The losing ones cost {usd(Math.abs(poly.bets.lostOnLosers))}, and the biggest single loss was{" "}
-                    {usd(Math.abs(poly.bets.biggestLoss))}.
-                    {poly.bets.truncated && " This wallet has too many bets to read in one go, so only the most recent ones are counted here."}
-                  </p>
-                )}
-                {poly.money.officialAllTimePnl !== null && (
-                  <p className="mt-2">
-                    Polymarket's own profit and loss for this wallet: {usd(poly.money.officialAllTimePnl)}.
-                    {polyGap <= -5 &&
-                      ` That's ${usd(-polyGap)} better than your Polymarket row above. Likely reasons: open bets that are down right now, cash in the account you haven't entered, or money moved in or out without a bet.`}
-                    {polyGap >= 5 &&
-                      ` That's ${usd(polyGap)} worse than your Polymarket row above. Likely reasons: open bets that are up right now, cash you counted twice (type only cash, not your portfolio total), or money sent straight from an exchange that doesn't show here as a deposit.`}
-                  </p>
-                )}
-                {poly.money.openPositionValue === null && (
-                  <p className="mt-2">We couldn't read the value of your open bets, so they're counted as $0. Add them to the cash box if you know it.</p>
-                )}
-              </div>
-            )}
+              <h3 className="mt-10 text-lg font-semibold">By account</h3>
+              <ul className="mt-3 border-t border-line">
+                {rows.map((r) => (
+                  <li key={r.name} className="border-b border-line py-3">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <span className="font-medium">{r.name}</span>
+                      <span className="figure shrink-0 text-xl">{usd(r.net)}</span>
+                    </div>
+                    <dl className="mt-1 flex flex-wrap gap-x-5 gap-y-0.5 text-sm tabular-nums text-muted">
+                      <div className="flex gap-1.5">
+                        <dt>Put in</dt>
+                        <dd className="text-ink">{usd(r.deposited)}</dd>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <dt>Took out</dt>
+                        <dd className="text-ink">{usd(r.withdrawn)}</dd>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <dt>Still in it</dt>
+                        <dd className="text-ink">{usd(r.left)}</dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
 
-            <div className="mt-6 rounded-xl border border-teal-900/15 bg-teal-50 p-4 text-sm text-teal-950 print:hidden">
-              A number like this is a lot to look at. If it's hard, call or text {HELPLINE.label} ({HELPLINE.number}) now. If you're thinking about hurting yourself, call or text{" "}
-              <a className="font-semibold underline" href={CRISIS.tel}>
-                {CRISIS.label}
-              </a>
-              . Then do the next step, it's what changes things.
+              {poly && (
+                <div className="mt-10 space-y-3 leading-relaxed">
+                  <h3 className="text-lg font-semibold">Polymarket, bet by bet</h3>
+                  {poly.bets.winning + poly.bets.losing === 0 ? (
+                    <p className="text-muted">None of this wallet&apos;s bets have finished yet.</p>
+                  ) : (
+                    <p className="text-muted">
+                      From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that are finished (settled or sold):{" "}
+                      <span className="text-ink">
+                        {poly.bets.losing.toLocaleString()} lost and {poly.bets.winning.toLocaleString()} won
+                      </span>
+                      . The losing ones cost <span className="text-ink">{usd(Math.abs(poly.bets.lostOnLosers))}</span>, and the biggest single loss was{" "}
+                      <span className="text-ink">{usd(Math.abs(poly.bets.biggestLoss))}</span>.
+                      {poly.bets.truncated && " This wallet has too many bets to read in one go, so only the most recent ones are counted here."}
+                    </p>
+                  )}
+                  {poly.money.officialAllTimePnl !== null && (
+                    <p className="text-muted">
+                      Polymarket&apos;s own profit and loss for this wallet: <span className="text-ink">{usd(poly.money.officialAllTimePnl)}</span>.
+                      {polyGap <= -5 &&
+                        ` That's ${usd(-polyGap)} better than your Polymarket row above. Likely reasons: open bets that are down right now, cash in the account you haven't entered, or money moved in or out without a bet.`}
+                      {polyGap >= 5 &&
+                        ` That's ${usd(polyGap)} worse than your Polymarket row above. Likely reasons: open bets that are up right now, cash you counted twice (type only cash, not your portfolio total), or money sent straight from an exchange that doesn't show here as a deposit.`}
+                    </p>
+                  )}
+                  {poly.money.openPositionValue === null && (
+                    <p className="text-muted">We couldn&apos;t read the value of your open bets, so they&apos;re counted as $0. Add them to the cash box if you know it.</p>
+                  )}
+                </div>
+              )}
             </div>
           </section>
         )}
 
-        <section className="mb-10 rounded-2xl border border-stone-200 bg-white p-6 print:border-0 print:p-0">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="text-lg font-semibold">4. Close every door</h2>
-            <span className="text-sm text-stone-500 tabular-nums">
-              {doorsDone} of {DOORS.length} done
-            </span>
-          </div>
-          <p className="mt-1 text-sm text-stone-600">Do the ones you've used, plus the shared list and a device blocker.</p>
-          <ol className="mt-5 space-y-4">
+        <section className="mt-14 border-t border-line pt-10">
+          <Heading
+            n={revealed ? 4 : 3}
+            aside={
+              <span className="shrink-0 text-sm tabular-nums text-muted">
+                {doorsDone} of {DOORS.length} done
+              </span>
+            }
+          >
+            Close every door
+          </Heading>
+          <p className="mt-3 leading-relaxed text-muted">Do the ones you&apos;ve used, plus the shared list and a device blocker.</p>
+          <ol className="mt-6 border-t border-line">
             {DOORS.map((d) => (
-              <li key={d.id} className={`rounded-xl border p-4 ${done[d.id] ? "border-teal-700/30 bg-teal-50/50" : "border-stone-200"}`}>
+              <li key={d.id} className="border-b border-line py-6 last:border-b-0 last:pb-0 [break-inside:avoid]">
                 <label className="flex cursor-pointer items-start gap-3">
-                  <input type="checkbox" className="mt-1 size-4 accent-teal-800" checked={!!done[d.id]} onChange={(e) => setDone((x) => ({ ...x, [d.id]: e.target.checked }))} />
-                  <span>
-                    <span className="font-medium">{d.name}</span>
-                    <span className="mt-0.5 block text-sm text-stone-600">{d.what}</span>
+                  <span className="flex size-11 shrink-0 items-center justify-center">
+                    <input
+                      type="checkbox"
+                      className="size-5 cursor-pointer accent-[var(--accent)]"
+                      checked={!!done[d.id]}
+                      onChange={(e) => setDone((x) => ({ ...x, [d.id]: e.target.checked }))}
+                    />
+                  </span>
+                  <span className="pt-1.5">
+                    <span className={`block font-serif text-[1.375rem] leading-tight ${done[d.id] ? "text-muted line-through decoration-1" : ""}`}>{d.name}</span>
+                    <span className="mt-1.5 block leading-relaxed text-muted">{d.what}</span>
                   </span>
                 </label>
-                <ul className="ml-7 mt-3 list-disc space-y-1 pl-4 text-sm text-stone-700">
-                  {d.steps.map((s) => (
-                    <li key={s}>{s}</li>
-                  ))}
-                </ul>
-                {d.note && <p className="ml-7 mt-2 text-sm text-amber-800">{d.note}</p>}
-                {d.message && (
-                  <div className="ml-7 mt-3 print:hidden">
-                    <p className="rounded-lg bg-stone-50 p-3 text-sm text-stone-700">{d.message}</p>
-                    <button className="mt-2 text-sm font-medium text-teal-800 underline" onClick={() => copy(d.id, d.message!)}>
-                      {copied === d.id ? "Copied" : "Copy message"}
-                    </button>
-                  </div>
-                )}
-                {d.link && (
-                  <a className="ml-7 mt-2 inline-block text-sm text-teal-800 underline print:hidden" href={d.link.href} target="_blank" rel="noreferrer">
-                    {d.link.label}
-                  </a>
-                )}
-                {d.extraLink && (
-                  <a className="ml-4 mt-2 inline-block text-sm text-teal-800 underline print:hidden" href={d.extraLink.href} target="_blank" rel="noreferrer">
-                    {d.extraLink.label}
-                  </a>
-                )}
+                <div className="pl-14">
+                  <ul className="mt-3 list-disc space-y-1.5 pl-5 leading-relaxed marker:text-line-strong">
+                    {d.steps.map((s) => (
+                      <li key={s}>{s}</li>
+                    ))}
+                  </ul>
+                  {d.note && (
+                    <p className="mt-3 leading-relaxed">
+                      <span className="font-semibold">Note: </span>
+                      {d.note}
+                    </p>
+                  )}
+                  {d.message && (
+                    <div className="mt-4 print:hidden">
+                      <p className="border-l-2 border-line-strong pl-4 font-serif text-[1.0625rem] italic leading-relaxed text-muted">{d.message}</p>
+                      <button className={`${quiet} mt-3 text-sm`} onClick={() => copy(d.id, d.message!)}>
+                        {copied === d.id ? "Copied" : "Copy message"}
+                      </button>
+                    </div>
+                  )}
+                  {(d.link || d.extraLink) && (
+                    <p className="mt-3 flex flex-wrap gap-x-5 print:hidden">
+                      {d.link && (
+                        <a className={`${link} inline-flex min-h-11 items-center`} href={d.link.href} target="_blank" rel="noreferrer">
+                          {d.link.label}
+                        </a>
+                      )}
+                      {d.extraLink && (
+                        <a className={`${link} inline-flex min-h-11 items-center`} href={d.extraLink.href} target="_blank" rel="noreferrer">
+                          {d.extraLink.label}
+                        </a>
+                      )}
+                    </p>
+                  )}
+                </div>
               </li>
             ))}
           </ol>
         </section>
 
-        <section className="rounded-2xl border border-stone-200 bg-white p-6 print:hidden">
-          <h2 className="text-lg font-semibold">5. Bring it to someone</h2>
-          <p className="mt-1 text-sm text-stone-600">Print this page for a counselor or someone you trust. It shows your number and which doors are closed.</p>
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button className="rounded-lg border border-stone-300 px-4 py-2 font-medium" onClick={() => window.print()}>
+        <section className="mt-14 border-t border-line pt-10 print:hidden">
+          <Heading n={revealed ? 5 : 4}>Bring it to someone</Heading>
+          <p className="mt-3 leading-relaxed text-muted">Print this page for a counselor or someone you trust. It shows your number and which doors are closed.</p>
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <button className={primary} onClick={() => window.print()}>
               Print or save as PDF
             </button>
-            <button className="rounded-lg px-4 py-2 text-sm text-stone-600 underline" onClick={startOver}>
+            <button className="min-h-11 text-sm text-muted underline underline-offset-[3px] hover:text-ink" onClick={startOver}>
               Clear everything from this browser
             </button>
           </div>
         </section>
+
+        <footer className="mt-16 border-t border-line pt-6 text-sm leading-relaxed text-muted">
+          Talk to someone, free, 24/7:{" "}
+          <a className={`${link} whitespace-nowrap`} href={HELPLINE.tel}>
+            {HELPLINE.label} ({HELPLINE.number})
+          </a>
+          ,{" "}
+          <a className={link} href={HELPLINE.sms}>
+            text
+          </a>{" "}
+          (from a phone) or{" "}
+          <a className={link} href={HELPLINE.chat} target="_blank" rel="noreferrer">
+            chat
+          </a>
+          . In a crisis, call or text{" "}
+          <a className={link} href={CRISIS.tel}>
+            {CRISIS.label}
+          </a>
+          .
+        </footer>
       </main>
     </div>
   );
