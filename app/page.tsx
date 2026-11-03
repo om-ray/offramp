@@ -27,6 +27,17 @@ const PLATFORMS: { id: string; name: string; where: string }[] = [
   { id: "other", name: "Anything else", where: "DraftKings, FanDuel, Crypto.com, Novig, PrizePicks, sportsbooks" },
 ];
 
+const PLATFORM_DOORS: Record<string, string[]> = {
+  "polymarket-us": ["polymarket"],
+  kalshi: ["kalshi"],
+  robinhood: ["robinhood"],
+  coinbase: ["coinbase"],
+  webull: ["webull"],
+  other: ["fanduel", "draftkings", "cryptocom", "other"],
+};
+
+const SHARED_DOORS = new Set(["ic360", "devices"]);
+
 const FIELDS = [
   { key: "deposited", label: "Put in" },
   { key: "withdrawn", label: "Took out" },
@@ -69,7 +80,7 @@ function filled(a: Amounts | undefined) {
 const field =
   "h-12 w-full min-w-0 rounded-[4px] border border-line-strong bg-field px-3 text-base text-ink tabular-nums placeholder:text-muted focus-visible:border-accent";
 const primary =
-  "inline-flex min-h-12 items-center justify-center rounded-[4px] bg-ink px-5 font-medium text-paper transition-[transform,opacity] active:translate-y-px disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex min-h-12 items-center justify-center rounded-[4px] bg-ink px-5 font-medium text-paper transition-[transform,opacity] active:translate-y-px disabled:cursor-not-allowed disabled:bg-line disabled:text-muted";
 const quiet =
   "inline-flex min-h-11 items-center rounded-[4px] border border-line-strong px-4 font-medium text-ink transition-colors hover:border-ink active:translate-y-px";
 const link = "text-accent underline decoration-1 underline-offset-[3px] hover:decoration-2";
@@ -101,6 +112,7 @@ export default function Home() {
   const [revealed, setRevealed] = useState(false);
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState("");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const saved = load<Record<string, Amounts>>("amounts", {});
@@ -182,6 +194,7 @@ export default function Home() {
     setOpen({});
     setPolyCash("");
     setDone({});
+    setExpanded({});
     setPoly(null);
     setPolyState("idle");
     setPolyError("");
@@ -190,6 +203,10 @@ export default function Home() {
   }
 
   const doorsDone = DOORS.filter((d) => done[d.id]).length;
+  const used = new Set<string>([
+    ...(poly ? ["polymarket"] : []),
+    ...PLATFORMS.filter((p) => filled(amounts[p.id])).flatMap((p) => PLATFORM_DOORS[p.id] ?? []),
+  ]);
 
   return (
     <div className="min-h-[100dvh] bg-paper text-ink">
@@ -203,37 +220,25 @@ export default function Home() {
             A sportsbook self-exclusion doesn&apos;t cover Kalshi, Polymarket, or the event contracts inside Robinhood, Coinbase and Webull. This puts your real number in one
             place and walks you through shutting each one.
           </p>
-          <p className="mt-4 text-[0.9375rem] leading-relaxed text-muted print:hidden">
-            Want to talk to someone first?{" "}
-            <a className={`${link} whitespace-nowrap`} href={HELPLINE.tel}>
-              Call {HELPLINE.label}
-            </a>
-            ,{" "}
-            <a className={link} href={HELPLINE.sms}>
-              text
-            </a>{" "}
-            or{" "}
-            <a className={link} href={HELPLINE.chat} target="_blank" rel="noreferrer">
-              chat
-            </a>
-            . Free, any hour.
-          </p>
         </header>
 
         <section className="mt-12 border-t border-line pt-10 print:hidden">
           <Heading n={1}>Before you look, guess</Heading>
-          <p className="mt-3 leading-relaxed text-muted">Roughly how much do you think you&apos;re down, across everything?</p>
+          <p id="guess-hint" className="mt-3 leading-relaxed text-muted">
+            Roughly how much do you think you&apos;re down, across everything?
+          </p>
           <label className="mt-5 flex max-w-[16rem] items-baseline gap-2 border-b-2 border-line-strong pb-1 focus-within:border-accent">
             <span className="figure text-[2.5rem] leading-none text-muted" aria-hidden="true">
               $
             </span>
             <input
               aria-label="Your guess"
+              aria-describedby="guess-hint"
               inputMode="decimal"
-              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink outline-none placeholder:text-muted"
+              className="figure h-14 w-full min-w-0 bg-transparent text-[2.5rem] leading-none text-ink outline-none placeholder:text-line-strong placeholder:italic"
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
-              placeholder="0"
+              placeholder="your guess"
             />
           </label>
           <p className="mt-3 text-sm text-muted">Your numbers stay in this browser.</p>
@@ -244,10 +249,7 @@ export default function Home() {
 
           <div className="mt-7">
             <h3 className="text-lg font-semibold">Polymarket (polymarket.com)</h3>
-            <p className="mt-2 leading-relaxed text-muted">
-              Paste your polymarket.com username or wallet address. Deposits, withdrawals and bets are public, so this fills itself in. It goes through our server to
-              Polymarket&apos;s public data and isn&apos;t stored. Use the Polymarket US app? Add it in the list below instead.
-            </p>
+            <p className="mt-2 leading-relaxed text-muted">Paste your username or wallet address. Deposits, withdrawals and bets are public, so this fills itself in.</p>
             <div className="mt-4 flex gap-2">
               <input
                 aria-label="Polymarket username or wallet"
@@ -264,17 +266,23 @@ export default function Home() {
                 {polyState === "loading" ? "Reading every bet…" : "Load"}
               </button>
             </div>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              It goes through our server to Polymarket&apos;s public data and isn&apos;t stored. Polymarket US app? Add it in the list below.
+            </p>
             <div aria-live="polite">
               {polyState === "loading" && <p className="mt-3 text-sm text-muted">Busy wallets can take a couple of minutes.</p>}
               {polyState === "error" && <p className="mt-3 text-sm font-medium text-accent">{polyError}</p>}
               {poly && (
-                <p className="mt-3 text-sm text-muted">
+                <p className="mt-3 text-sm font-medium text-ink">
+                  <span aria-hidden="true" className="mr-1.5 text-accent">
+                    ✓
+                  </span>
                   Loaded {poly.wallet.slice(0, 6)}…{poly.wallet.slice(-4)}.
                 </p>
               )}
             </div>
             {poly && (
-              <label className="mt-4 block max-w-[20rem]">
+              <label className="mt-4 block">
                 <span className="block text-sm text-muted">Cash in your Polymarket account (not your portfolio total)</span>
                 <input inputMode="decimal" className={`${field} mt-2`} value={polyCash} onChange={(e) => setPolyCash(e.target.value)} placeholder="$0" />
               </label>
@@ -296,12 +304,15 @@ export default function Home() {
                       aria-expanded={isOpen}
                       aria-controls={`acct-${p.id}`}
                       onClick={() => setOpen((o) => ({ ...o, [p.id]: !o[p.id] }))}
-                      className="flex min-h-14 w-full items-center justify-between gap-4 py-3 text-left"
+                      className="-mx-2 flex min-h-14 w-[calc(100%+1rem)] items-center justify-between gap-4 rounded-[4px] px-2 py-3 text-left hover:bg-accent-wash/60"
                     >
                       <span className="font-medium">{p.name}</span>
-                      <span className="shrink-0 text-sm tabular-nums text-muted">
+                      <span className="flex shrink-0 items-center gap-3 text-[0.9375rem] tabular-nums text-ink">
                         {row ? `Net ${usd(row.net)}` : isOpen ? "Close" : "Add"}
-                        <span aria-hidden="true" className={`ml-2 inline-block transition-transform ${isOpen ? "rotate-45" : ""}`}>
+                        <span
+                          aria-hidden="true"
+                          className={`flex size-7 items-center justify-center rounded-full border border-line-strong text-lg leading-none transition-transform ${isOpen ? "rotate-45" : ""}`}
+                        >
                           +
                         </span>
                       </span>
@@ -341,14 +352,22 @@ export default function Home() {
         {revealed && (
           <section ref={resultRef} className="mt-14 scroll-mt-6 border-t border-line pt-10">
             <Heading n={3}>Your real number</Heading>
-            <p className="figure arrive mt-6 break-words text-[clamp(3.5rem,17vw,6.75rem)] leading-[0.95] tracking-[-0.02em]">{usd(total)}</p>
+            <p className="figure arrive mt-6 break-words text-[clamp(3.5rem,17vw,6.75rem)] leading-[0.95] tracking-[-0.02em]">
+              {shown < 0 && <span className="mr-[-0.06em]">−</span>}
+              {usd(Math.abs(total))}
+            </p>
             <div className="arrive-late">
               <p className="mt-6 font-serif text-[1.3125rem] leading-snug">
                 {shown < 0 && `That's how much less you have than you put in. You put in ${usd(put)} in total.`}
                 {shown === 0 && `You've got back about what you put in, ${usd(put)}.`}
                 {shown > 0 && `You have this much more than you put in. That can go back in fast. Being up doesn't make it safe, and closing the doors still matters.`}
               </p>
-              {guessed > 0 && shown < 0 && <p className="mt-2 font-serif text-[1.3125rem] italic leading-snug text-muted">You guessed {usd(-guessed)}.</p>}
+              {guessed > 0 && (
+                <div className="mt-6 flex items-baseline justify-between gap-4 border-t border-line pt-3 text-muted">
+                  <span>Your guess</span>
+                  <span className="figure text-xl">{usd(-guessed)}</span>
+                </div>
+              )}
 
               <p className="mt-8 border-l-2 border-accent pl-4 leading-relaxed print:hidden">
                 A number like this is a lot to look at. If it&apos;s hard, call or text{" "}
@@ -361,6 +380,9 @@ export default function Home() {
                 </a>
                 . Then do the next step. It&apos;s what changes things.
               </p>
+              <a className={`${link} mt-3 inline-flex min-h-11 items-center print:hidden`} href="#doors">
+                Next: close the doors you&apos;ve used
+              </a>
 
               {poly && poly.money.officialAllTimePnl !== null && poly.money.officialAllTimePnl < 0 && polyGap >= 5 && (
                 <p className="mt-6 font-medium leading-relaxed">
@@ -383,15 +405,15 @@ export default function Home() {
                       <span className="figure shrink-0 text-xl">{usd(r.net)}</span>
                     </div>
                     <dl className="mt-1 flex flex-wrap gap-x-5 gap-y-0.5 text-sm tabular-nums text-muted">
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1.5 whitespace-nowrap">
                         <dt>Put in</dt>
                         <dd className="text-ink">{usd(r.deposited)}</dd>
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1.5 whitespace-nowrap">
                         <dt>Took out</dt>
                         <dd className="text-ink">{usd(r.withdrawn)}</dd>
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1.5 whitespace-nowrap">
                         <dt>Still in it</dt>
                         <dd className="text-ink">{usd(r.left)}</dd>
                       </div>
@@ -406,15 +428,27 @@ export default function Home() {
                   {poly.bets.winning + poly.bets.losing === 0 ? (
                     <p className="text-muted">None of this wallet&apos;s bets have finished yet.</p>
                   ) : (
-                    <p className="text-muted">
-                      From {date(poly.bets.from)} to {date(poly.bets.to)}, of the bets that are finished (settled or sold):{" "}
-                      <span className="text-ink">
-                        {poly.bets.losing.toLocaleString()} lost and {poly.bets.winning.toLocaleString()} won
-                      </span>
-                      . The losing ones cost <span className="text-ink">{usd(Math.abs(poly.bets.lostOnLosers))}</span>, and the biggest single loss was{" "}
-                      <span className="text-ink">{usd(Math.abs(poly.bets.biggestLoss))}</span>.
-                      {poly.bets.truncated && " This wallet has too many bets to read in one go, so only the most recent ones are counted here."}
-                    </p>
+                    <>
+                      <p className="text-sm text-muted">
+                        Bets that are finished (settled or sold), {date(poly.bets.from)} to {date(poly.bets.to)}
+                      </p>
+                      <dl className="border-t border-line">
+                        {[
+                          ["Bets lost", poly.bets.losing.toLocaleString("en-US")],
+                          ["Bets won", poly.bets.winning.toLocaleString("en-US")],
+                          ["Lost on the losing ones", usd(Math.abs(poly.bets.lostOnLosers))],
+                          ["Biggest single loss", usd(Math.abs(poly.bets.biggestLoss))],
+                        ].map(([label, value]) => (
+                          <div key={label} className="flex items-baseline justify-between gap-4 border-b border-line py-2.5">
+                            <dt className="text-muted">{label}</dt>
+                            <dd className="figure text-xl">{value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                      {poly.bets.truncated && (
+                        <p className="text-muted">This wallet has too many bets to read in one go, so only the most recent ones are counted here.</p>
+                      )}
+                    </>
                   )}
                   {poly.money.officialAllTimePnl !== null && (
                     <p className="text-muted">
@@ -434,7 +468,7 @@ export default function Home() {
           </section>
         )}
 
-        <section className="mt-14 border-t border-line pt-10">
+        <section id="doors" className="mt-14 scroll-mt-6 border-t border-line pt-10">
           <Heading
             n={revealed ? 4 : 3}
             aside={
@@ -445,61 +479,87 @@ export default function Home() {
           >
             Close every door
           </Heading>
-          <p className="mt-3 leading-relaxed text-muted">Do the ones you&apos;ve used, plus the shared list and a device blocker.</p>
+          <p className="mt-3 leading-relaxed text-muted">Do the ones you&apos;ve used, plus the shared list and a device blocker. Tick each one off when it&apos;s done.</p>
           <ol className="mt-6 border-t border-line">
-            {DOORS.map((d) => (
-              <li key={d.id} className="border-b border-line py-6 last:border-b-0 last:pb-0 [break-inside:avoid]">
-                <label className="flex cursor-pointer items-start gap-3">
-                  <span className="flex size-11 shrink-0 items-center justify-center">
-                    <input
-                      type="checkbox"
-                      className="size-5 cursor-pointer accent-[var(--accent)]"
-                      checked={!!done[d.id]}
-                      onChange={(e) => setDone((x) => ({ ...x, [d.id]: e.target.checked }))}
-                    />
-                  </span>
-                  <span className="pt-1.5">
-                    <span className={`block font-serif text-[1.375rem] leading-tight ${done[d.id] ? "text-muted line-through decoration-1" : ""}`}>{d.name}</span>
-                    <span className="mt-1.5 block leading-relaxed text-muted">{d.what}</span>
-                  </span>
-                </label>
-                <div className="pl-14">
-                  <ul className="mt-3 list-disc space-y-1.5 pl-5 leading-relaxed marker:text-line-strong">
-                    {d.steps.map((s) => (
-                      <li key={s}>{s}</li>
-                    ))}
-                  </ul>
-                  {d.note && (
-                    <p className="mt-3 leading-relaxed">
-                      <span className="font-semibold">Note: </span>
-                      {d.note}
-                    </p>
-                  )}
-                  {d.message && (
-                    <div className="mt-4 print:hidden">
-                      <p className="border-l-2 border-line-strong pl-4 font-serif text-[1.0625rem] italic leading-relaxed text-muted">{d.message}</p>
-                      <button className={`${quiet} mt-3 text-sm`} onClick={() => copy(d.id, d.message!)}>
-                        {copied === d.id ? "Copied" : "Copy message"}
+            {DOORS.map((d) => {
+              const isOpen = expanded[d.id] ?? (!done[d.id] && (SHARED_DOORS.has(d.id) || used.has(d.id)));
+              return (
+                <li key={d.id} className="border-b border-line py-5 [break-inside:avoid]">
+                  <div className="flex items-start gap-1">
+                    <label className="-ml-3 flex size-11 shrink-0 cursor-pointer items-center justify-center">
+                      <input
+                        type="checkbox"
+                        aria-label={`${d.name} done`}
+                        className="size-5 cursor-pointer accent-[var(--accent)]"
+                        checked={!!done[d.id]}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setDone((x) => ({ ...x, [d.id]: checked }));
+                          setExpanded((x) => ({ ...x, [d.id]: !checked }));
+                        }}
+                      />
+                    </label>
+                    <div className="min-w-0 flex-1 pt-1.5">
+                      <button
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-controls={`door-${d.id}`}
+                        onClick={() => setExpanded((x) => ({ ...x, [d.id]: !isOpen }))}
+                        className="flex w-full items-baseline justify-between gap-4 text-left"
+                      >
+                        <span className={`font-serif text-[1.375rem] leading-tight ${done[d.id] ? "text-muted line-through decoration-1" : ""}`}>{d.name}</span>
+                        <span className="shrink-0 text-sm text-ink print:hidden">
+                          {done[d.id] ? "Done" : isOpen ? "Hide steps" : "Show steps"}
+                          <span aria-hidden="true" className={`ml-1.5 inline-block transition-transform ${isOpen ? "rotate-180" : ""}`}>
+                            ⌄
+                          </span>
+                        </span>
                       </button>
+                      <p className="mt-1.5 leading-relaxed text-muted">{d.what}</p>
+                      <div id={`door-${d.id}`} className={isOpen ? "" : "hidden print:block"}>
+                        <ol className="mt-3 list-decimal space-y-1.5 pl-5 leading-relaxed marker:text-muted">
+                          {d.steps.map((s) => (
+                            <li key={s} className="pl-1">
+                              {s}
+                            </li>
+                          ))}
+                        </ol>
+                        {d.note && (
+                          <p className="mt-3 leading-relaxed">
+                            <span className="font-semibold">Note: </span>
+                            {d.note}
+                          </p>
+                        )}
+                        {d.message && (
+                          <div className="mt-4 print:hidden">
+                            <p className="rounded-[4px] border border-line bg-field p-3 text-[0.9375rem] leading-relaxed">{d.message}</p>
+                          </div>
+                        )}
+                        {(d.message || d.link || d.extraLink) && (
+                          <p className="mt-2 flex flex-wrap items-center gap-x-5 print:hidden">
+                            {d.message && (
+                              <button className={`${quiet} text-sm`} onClick={() => copy(d.id, d.message!)}>
+                                {copied === d.id ? "Copied" : "Copy message"}
+                              </button>
+                            )}
+                            {d.link && (
+                              <a className={`${link} inline-flex min-h-11 items-center`} href={d.link.href} target="_blank" rel="noreferrer">
+                                {d.link.label}
+                              </a>
+                            )}
+                            {d.extraLink && (
+                              <a className={`${link} inline-flex min-h-11 items-center`} href={d.extraLink.href} target="_blank" rel="noreferrer">
+                                {d.extraLink.label}
+                              </a>
+                            )}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  {(d.link || d.extraLink) && (
-                    <p className="mt-3 flex flex-wrap gap-x-5 print:hidden">
-                      {d.link && (
-                        <a className={`${link} inline-flex min-h-11 items-center`} href={d.link.href} target="_blank" rel="noreferrer">
-                          {d.link.label}
-                        </a>
-                      )}
-                      {d.extraLink && (
-                        <a className={`${link} inline-flex min-h-11 items-center`} href={d.extraLink.href} target="_blank" rel="noreferrer">
-                          {d.extraLink.label}
-                        </a>
-                      )}
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))}
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         </section>
 
